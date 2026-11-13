@@ -107,6 +107,7 @@ function modalCategoria(ctx) {
     titulo: 'Nova categoria',
     corpo: `
       <form id="form-categoria">
+        ${ui.campoTexto('Código auxiliar', 'codigo_auxiliar', '', { placeholder: 'opcional' })}
         ${ui.campoTexto('Descrição', 'descricao', '', { obrigatorio: true })}
         <div class="linha-acoes">
           <button type="submit" class="botao-primario">Criar</button>
@@ -120,7 +121,10 @@ function modalCategoria(ctx) {
     ev.preventDefault();
     const d = ui.dadosDoForm(ev.target);
     try {
-      await criar('arm_categorias', { descricao: d.descricao });
+      await criar('arm_categorias', {
+        descricao: d.descricao,
+        codigo_auxiliar: d.codigo_auxiliar || null,
+      });
       fechar();
       ui.toast('Categoria criada.');
       ctx.recarregar();
