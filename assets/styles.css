@@ -1,0 +1,200 @@
+:root {
+  --azul: #0b2a6b;
+  --azul-medio: #173f8a;
+  --fundo: #e8e8e8;
+  --superficie: #fff;
+  --borda: #d6d6d6;
+  --texto: #1d1d1f;
+  --suave: #5b5b60;
+  --verde: #0a8a3c;
+  --vermelho: #c01818;
+  --vermelho-escuro: #8f1010;
+  --raio: 8px;
+  --sombra: 0 1px 2px rgba(0, 0, 0, .08), 0 6px 18px rgba(0, 0, 0, .06);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--fundo);
+  color: var(--texto);
+  font-size: 15px;
+}
+
+a { color: var(--azul); }
+h1, h2, h3 { margin: 0 0 .5rem; line-height: 1.2; }
+
+/* ---------- login ---------- */
+.tela-login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: var(--fundo);
+  padding: 24px;
+}
+.cartao-login {
+  width: 100%; max-width: 430px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  padding: 30px 28px;
+  box-shadow: var(--sombra);
+}
+.cartao-login h1 { font-size: 1.5rem; text-align: center; }
+.cartao-login .sub { color: var(--suave); text-align: center; margin-bottom: 22px; font-size: .9rem; }
+
+/* ---------- layout ---------- */
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+
+.topo {
+  background: var(--azul);
+  color: #fff;
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.topo .marca { font-weight: 700; letter-spacing: .02em; }
+.topo .sistema { font-size: .85rem; opacity: .85; }
+.topo .usuario { margin-left: auto; font-size: .82rem; opacity: .9; text-align: right; }
+.topo .usuario button {
+  margin-left: 10px; background: rgba(255, 255, 255, .14); color: #fff;
+  border: 1px solid rgba(255, 255, 255, .35); border-radius: 6px; padding: 4px 10px; cursor: pointer;
+}
+
+.barra {
+  background: #3a3a3e; color: #fff; padding: 8px 18px;
+  display: flex; gap: 22px; align-items: center; font-size: .92rem;
+}
+.barra a { color: #fff; text-decoration: none; }
+.barra a:hover { text-decoration: underline; }
+.barra .atual { font-weight: 700; }
+
+main { flex: 1; padding: 20px; max-width: 1180px; width: 100%; margin: 0 auto; }
+
+/* ---------- componentes ---------- */
+.cartao {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  padding: 18px 20px;
+  margin-bottom: 18px;
+  box-shadow: var(--sombra);
+}
+.cartao-topo { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.cartao-topo h2 { margin: 0; font-size: 1.1rem; }
+
+.titulo-pagina { text-align: center; font-size: 1.6rem; font-weight: 700; margin: 6px 0 18px; }
+
+.grade { display: grid; gap: 14px; }
+.grade-2 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.grade-3 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+th, td { border: 1px solid #c9c9c9; padding: 6px 8px; text-align: left; }
+th { background: #f1f1f1; font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr:hover { background: #fafafa; }
+
+button, .botao {
+  font: inherit; cursor: pointer; border-radius: 6px;
+  border: 1px solid var(--borda); background: var(--superficie); color: var(--texto);
+  padding: 8px 14px;
+}
+button:hover, .botao:hover { background: #f2f2f2; }
+button:disabled { opacity: .55; cursor: not-allowed; }
+
+.botao-primario { background: var(--vermelho); border-color: var(--vermelho-escuro); color: #fff; }
+.botao-primario:hover { background: var(--vermelho-escuro); }
+.botao-azul { background: var(--azul); border-color: var(--azul); color: #fff; }
+.botao-azul:hover { background: var(--azul-medio); }
+.botao-pequeno { padding: 4px 10px; font-size: .82rem; }
+.botao-perigo { color: var(--vermelho); border-color: #e6b4b4; }
+
+.campo { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.campo > span { font-size: .8rem; color: var(--suave); font-weight: 600; }
+input, select, textarea {
+  font: inherit; padding: 8px 10px; border: 1px solid var(--borda);
+  border-radius: 6px; background: #fff; width: 100%;
+}
+textarea { resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: .9rem; }
+input:focus, select:focus, textarea:focus { outline: 2px solid rgba(11, 42, 107, .25); border-color: var(--azul); }
+
+.vazio { color: var(--suave); font-style: italic; padding: 14px 2px; }
+.sub { color: var(--suave); font-size: .87rem; }
+.linha-acoes { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.aviso { background: #fff6d8; border: 1px solid #e8d189; color: #6b5300; padding: 12px 14px; border-radius: 6px; margin: 12px 0; font-size: .9rem; }
+.erro { background: #fdecec; border: 1px solid #f0b4b4; color: #7a1414; padding: 12px 14px; border-radius: 6px; margin: 12px 0; font-size: .9rem; }
+
+.carregando { padding: 40px; text-align: center; color: var(--suave); }
+
+/* cartões de operação */
+.operacoes { display: flex; gap: 26px; flex-wrap: wrap; justify-content: center; }
+.operacao {
+  width: 210px; background: var(--superficie); border: 1px solid var(--borda);
+  padding: 14px; text-align: center; box-shadow: var(--sombra); text-decoration: none; color: inherit;
+  display: block;
+}
+.operacao h3 { color: var(--vermelho); font-size: 1rem; }
+.operacao p { font-size: .85rem; color: var(--suave); }
+.operacao.inativa { opacity: .55; cursor: not-allowed; }
+
+/* lojas */
+.lojas { display: flex; gap: 24px; flex-wrap: wrap; }
+.loja {
+  width: 180px; border: 1px solid #999; background: #fff; padding: 10px; text-align: center;
+  box-shadow: 2px 2px 0 #ccc;
+}
+.loja h3 { color: var(--vermelho); font-size: .95rem; margin-bottom: 6px; }
+.loja .nome { font-size: .9rem; margin-bottom: 10px; }
+
+/* totais do relatório */
+.totais { border-collapse: collapse; width: 100%; margin: 14px 0; }
+.totais th, .totais td { border: 1px solid #999; padding: 6px 10px; }
+.totais .barra-cel { width: 60%; padding: 0; }
+.barra-progresso { height: 22px; background: var(--verde); }
+.mono { font-family: ui-monospace, Consolas, monospace; }
+
+/* modal / toast */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, .45);
+  display: grid; place-items: start center; padding: 48px 16px; overflow-y: auto; z-index: 50;
+}
+.modal { background: #fff; border-radius: 10px; width: 100%; max-width: 560px; box-shadow: 0 20px 50px rgba(0, 0, 0, .3); }
+.modal-topo { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--borda); }
+.modal-topo h2 { margin: 0; font-size: 1rem; }
+.modal-corpo { padding: 16px 18px; }
+.fechar { border: none; background: transparent; font-size: 22px; line-height: 1; cursor: pointer; }
+
+.toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: #1d1d1f; color: #fff; padding: 10px 18px; border-radius: 8px; z-index: 100;
+  max-width: 90vw; transition: opacity .3s, transform .3s;
+}
+.toast-erro { background: #8f1010; }
+.toast.sair { opacity: 0; transform: translateX(-50%) translateY(8px); }
+
+/* ---------- impressão ---------- */
+.area-impressao { display: none; }
+
+.print-cabecalho {
+  display: flex; align-items: center; gap: 18px;
+  background: var(--azul); color: #fff; padding: 14px 18px; margin-bottom: 4px;
+}
+.print-cabecalho .titulo { flex: 1; text-align: center; }
+.print-cabecalho h1 { font-size: 22pt; margin: 0; text-transform: uppercase; }
+.print-cabecalho h2 { font-size: 15pt; margin: 2px 0 0; }
+.print-periodo { text-align: center; font-weight: 700; margin: 8px 0 14px; }
+.print-assinaturas { display: flex; gap: 60px; margin-top: 46px; }
+.print-assinaturas div { flex: 1; border-top: 1px solid #000; padding-top: 6px; text-align: center; font-size: 10pt; }
+
+@media print {
+  #app { display: none !important; }
+  .area-impressao { display: block !important; color: #000; }
+  body { background: #fff; }
+  @page { size: A4; margin: 12mm; }
+  .print-cabecalho { background: var(--azul) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .barra { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  table { font-size: 9pt; }
+  th, td { border: 1px solid #555; padding: 4px 6px; }
+}

@@ -1,0 +1,12 @@
+# dependências / ambiente
+node_modules/
+.env
+.env.*
+
+# sistema
+.DS_Store
+Thumbs.db
+
+# temporários
+*.log
+*.zip
