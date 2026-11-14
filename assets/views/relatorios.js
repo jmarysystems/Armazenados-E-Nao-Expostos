@@ -47,7 +47,7 @@ function tabelaTotais(totais, categorias, comCategorias) {
 function tabelaItens(itens) {
   if (!itens.length) return ui.vazio('Nenhum item no período.');
   return `
-    <table>
+    <div class="tabela-rolagem"><table>
       <thead><tr>
         <th>DATA DO CADASTRO</th><th>DESCRIÇÃO_DO_PRODUTO</th><th>EAN</th><th>SKU</th>
         <th>CATEGORIA</th><th>AUDITOR</th>
@@ -62,7 +62,7 @@ function tabelaItens(itens) {
           <td>${ui.esc(i.auditor || '')}</td>
         </tr>`).join('')}
       </tbody>
-    </table>`;
+    </table></div>`;
 }
 
 function cabecalhoImpressao(titulo, subtitulo, periodo) {
@@ -134,8 +134,7 @@ export async function imprimirPorLoja(inicio, fim) {
           <td><strong>TOTAIS →</strong></td>
           <td class="num">${ui.num(d.totais.qtd_deposito)}</td>
           <td class="num">${ui.pct(d.totais.percentual)}</td>
-          <td class="barra-cel"><div class="barra-progresso"
-            style="width:100%"></div></td>
+          <td class="barra-cel"><div class="barra-progresso" style="width:100%"></div></td>
           <td class="num">${ui.num(d.totais.qtd_auditada)}</td>
         </tr>
         ${linhas}
@@ -159,7 +158,7 @@ function modalEmail(assunto, texto) {
       <label class="campo"><span>Mensagem</span>
         <textarea id="texto" rows="10">${ui.esc(texto)}</textarea></label>
       <div class="linha-acoes">
-        <button type="button" class="botao-azul" id="gmail">Gmail</button>
+        <button type="button" class="botao-primario" id="gmail">Gmail</button>
         <button type="button" class="botao" id="outlook">Outlook</button>
         <button type="button" class="botao" id="copiar">Copiar</button>
         <button type="button" class="botao" id="fechar">Fechar</button>
@@ -191,7 +190,7 @@ function modalEmail(assunto, texto) {
 }
 
 function textoDoPeriodo(d) {
-  const linhas = [
+  return [
     `Relatório: Armazenados e Não Expostos — ${d.loja || ''}`,
     `Período: ${ui.dataBR(d.periodo.inicio)} a ${ui.dataBR(d.periodo.fim)}`,
     '',
@@ -204,126 +203,158 @@ function textoDoPeriodo(d) {
     '',
     `Itens (${d.itens.length}):`,
     ...d.itens.map((i) => `• ${i.descricao} — EAN ${i.ean || '-'} · SKU ${i.sku || '-'} · ${i.categoria || '-'} · ${i.auditor || '-'}`),
-  ];
-  return linhas.join('\n');
+  ].join('\n');
 }
 
 // ---------------------------------------------------------------------
-// Tela
+// Tela: abas com os campos e o botão Enviar dentro de cada uma
 // ---------------------------------------------------------------------
 export async function render(raiz, ctx) {
   ctx.setTitulo('Relatórios');
+
   const lojasTodas = await listar('arm_lojas', { ordem: 'nome' });
   const lojas = ctx.perfil.perfil === 'admin'
     ? lojasTodas
     : lojasTodas.filter((l) => l.id === ctx.perfil.loja_id);
-
-  const opcoesLoja = lojas.map((l) => ({ valor: l.id, rotulo: l.nome })).map((o) => o);
+  const opcoesLoja = lojas.map((l) => ({ valor: l.id, rotulo: l.nome }));
+  const primeira = opcoesLoja[0]?.valor || '';
 
   raiz.innerHTML = `
-    <h2 class="titulo-pagina">Relatórios</h2>
     <div class="cartao">
       <div class="abas">
         <button type="button" class="aba ativa" data-aba="periodo">Por Período</button>
         <button type="button" class="aba" data-aba="dia">Por Dia</button>
         <button type="button" class="aba" data-aba="loja">Por Loja</button>
       </div>
-      <div class="grade grade-3" id="filtros-dia">
-        ${ui.campoSelect('Loja', 'lojaDia', opcoesLoja, opcoesLoja[0]?.valor, { vazio: '—' })}
-        ${ui.campoTexto('Data', 'dataDia', hojeISO(), { tipo: 'date' })}
-      </div>
-      <div class="grade grade-3" id="filtros-periodo" hidden>
-        ${ui.campoSelect('Loja', 'lojaPeriodo', opcoesLoja, opcoesLoja[0]?.valor, { vazio: '—' })}
-        ${ui.campoTexto('Data Inicial', 'inicio', primeiroDiaDoAno(), { tipo: 'date' })}
-        ${ui.campoTexto('Data Final', 'fim', hojeISO(), { tipo: 'date' })}
-      </div>
-      <div class="grade grade-3" id="filtros-loja" hidden>
-        ${ui.campoTexto('Data Inicial', 'inicioLoja', primeiroDiaDoAno(), { tipo: 'date' })}
-        ${ui.campoTexto('Data Final', 'fimLoja', hojeISO(), { tipo: 'date' })}
-      </div>
-      <div id="saida"></div>
+
+      <section data-painel="periodo">
+        <div class="grade grade-3">
+          ${ui.campoSelect('Loja', 'lojaPeriodo', opcoesLoja, primeira, { vazio: '—' })}
+          ${ui.campoTexto('Data Inicial', 'inicio', primeiroDiaDoAno(), { tipo: 'date' })}
+          ${ui.campoTexto('Data Final', 'fim', hojeISO(), { tipo: 'date' })}
+        </div>
+        <div class="linha-acoes"><button type="button" class="botao-primario" data-enviar="periodo">Enviar</button></div>
+        <div data-saida="periodo"></div>
+      </section>
+
+      <section data-painel="dia" hidden>
+        <div class="grade grade-2">
+          ${ui.campoSelect('Loja', 'lojaDia', opcoesLoja, primeira, { vazio: '—' })}
+          ${ui.campoTexto('Data', 'dataDia', hojeISO(), { tipo: 'date' })}
+        </div>
+        <div class="linha-acoes"><button type="button" class="botao-primario" data-enviar="dia">Enviar</button></div>
+        <div data-saida="dia"></div>
+      </section>
+
+      <section data-painel="loja" hidden>
+        <div class="grade grade-2">
+          ${ui.campoTexto('Data Inicial', 'inicioLoja', primeiroDiaDoAno(), { tipo: 'date' })}
+          ${ui.campoTexto('Data Final', 'fimLoja', hojeISO(), { tipo: 'date' })}
+        </div>
+        <div class="linha-acoes"><button type="button" class="botao-primario" data-enviar="loja">Enviar</button></div>
+        <div data-saida="loja"></div>
+      </section>
     </div>`;
 
-  const saida = raiz.querySelector('#saida');
-  let aba = 'periodo';
+  const campo = (nome) => raiz.querySelector(`[name="${nome}"]`);
+  const saida = (aba) => raiz.querySelector(`[data-saida="${aba}"]`);
 
-  const campos = (nome) => raiz.querySelector(`[name="${nome}"]`);
-
-  function trocar(nova) {
-    aba = nova;
-    raiz.querySelector('#filtros-dia').hidden = nova !== 'dia';
-    raiz.querySelector('#filtros-periodo').hidden = nova !== 'periodo';
-    raiz.querySelector('#filtros-loja').hidden = nova !== 'loja';
-    for (const b of raiz.querySelectorAll('[data-aba]')) {
-      b.classList.toggle('ativa', b.dataset.aba === nova);
-    }
-    saida.innerHTML = '';
+  // ---------- abas ----------
+  for (const b of raiz.querySelectorAll('[data-aba]')) {
+    b.addEventListener('click', () => {
+      const nova = b.dataset.aba;
+      raiz.querySelectorAll('[data-aba]').forEach((x) => x.classList.toggle('ativa', x === b));
+      raiz.querySelectorAll('[data-painel]').forEach((p) => { p.hidden = p.dataset.painel !== nova; });
+    });
   }
 
-  async function pesquisar() {
-    saida.innerHTML = '<div class="carregando">Consultando…</div>';
+  // ---------- Por período ----------
+  async function consultarPeriodo() {
+    const alvo = saida('periodo');
+    alvo.innerHTML = '<div class="carregando">Consultando…</div>';
     try {
-      if (aba === 'dia') {
-        const d = await rpc('arm_relatorio_dia', {
-          p_loja_id: campos('lojaDia').value,
-          p_data: campos('dataDia').value,
-        });
-        if (!d.auditorias.length) { saida.innerHTML = ui.vazio('Nenhuma auditoria neste dia.'); return; }
-        saida.innerHTML = `
-          <table>
-            <thead><tr><th>RELATÓRIO</th><th>ID</th><th>DATA CADASTRO</th><th>LOJA</th>
-              <th class="num">QTD ITENS AUDITADOS</th><th>AUDITOR</th><th>ENVIADO EMAIL</th></tr></thead>
-            <tbody>
-              ${d.auditorias.map((a) => `<tr>
-                <td><button type="button" class="botao-pequeno botao-primario"
-                     data-imprimir-dia="${ui.esc(a.id)}">ABRIR</button></td>
-                <td>${ui.esc(a.id.slice(0, 8))}</td>
-                <td>${ui.dataHoraBR(a.data_cadastro)}</td>
-                <td>${ui.esc(a.loja)}</td>
-                <td class="num">${ui.num(a.qtd_auditada)}</td>
-                <td>${ui.esc(a.remetente)}</td>
-                <td>${a.enviado_email ? 'SIM' : 'NÃO'}</td>
-              </tr>`).join('')}
-            </tbody>
-          </table>`;
-        for (const b of saida.querySelectorAll('[data-imprimir-dia]')) {
-          b.addEventListener('click', () => imprimirPeriodo(campos('lojaDia').value,
-            campos('dataDia').value, campos('dataDia').value,
-            lojas.find((l) => l.id === campos('lojaDia').value)?.nome));
-        }
+      const d = await rpc('arm_relatorio_periodo', {
+        p_loja_id: campo('lojaPeriodo').value,
+        p_inicio: campo('inicio').value,
+        p_fim: campo('fim').value,
+      });
+      alvo.innerHTML = `
+        <h3 style="text-align:center">${ui.esc(d.loja || '')}</h3>
+        ${tabelaTotais(d.totais, d.categorias, true)}
+        <h3 style="text-align:center;margin-top:14px">Produtos Armazenados e Não Expostos</h3>
+        ${tabelaItens(d.itens)}
+        <div class="linha-acoes" style="margin-top:14px;justify-content:center">
+          <button type="button" class="botao-azul" id="imprimir-periodo">Imprimir</button>
+          <button type="button" class="botao" id="email-periodo">Enviar por e-mail</button>
+        </div>`;
+      alvo.querySelector('#imprimir-periodo').addEventListener('click', () =>
+        imprimirPeriodo(campo('lojaPeriodo').value, campo('inicio').value, campo('fim').value, d.loja));
+      alvo.querySelector('#email-periodo').addEventListener('click', () =>
+        modalEmail('Relatório Armazenados e Não Expostos', textoDoPeriodo(d)));
+    } catch (erro) {
+      alvo.innerHTML = `<div class="erro">${ui.esc(erro.message)}</div>`;
+    }
+  }
+
+  // ---------- Por dia ----------
+  async function consultarDia() {
+    const alvo = saida('dia');
+    alvo.innerHTML = '<div class="carregando">Consultando…</div>';
+    try {
+      const d = await rpc('arm_relatorio_dia', {
+        p_loja_id: campo('lojaDia').value,
+        p_data: campo('dataDia').value,
+      });
+      const nomeLoja = lojas.find((l) => l.id === campo('lojaDia').value)?.nome || '';
+
+      if (!d.auditorias.length) {
+        alvo.innerHTML = `<h3 style="text-align:center">${ui.esc(nomeLoja)}</h3>`
+          + ui.vazio('Nenhuma auditoria neste dia.');
         return;
       }
 
-      if (aba === 'periodo') {
-        const d = await rpc('arm_relatorio_periodo', {
-          p_loja_id: campos('lojaPeriodo').value,
-          p_inicio: campos('inicio').value,
-          p_fim: campos('fim').value,
-        });
-        saida.innerHTML = `
-          <h3 style="text-align:center">${ui.esc(d.loja || '')}</h3>
-          ${tabelaTotais(d.totais, d.categorias, true)}
-          <h3 style="text-align:center;margin-top:14px">Produtos Armazenados e Não Expostos</h3>
-          ${tabelaItens(d.itens)}
-          <div class="linha-acoes" style="margin-top:14px;justify-content:center">
-            <button type="button" class="botao-azul" id="imprimir">Imprimir</button>
-            <button type="button" class="botao" id="email">Enviar por e-mail</button>
-          </div>`;
-        saida.querySelector('#imprimir').addEventListener('click', () =>
-          imprimirPeriodo(campos('lojaPeriodo').value, campos('inicio').value, campos('fim').value, d.loja));
-        saida.querySelector('#email').addEventListener('click', () =>
-          modalEmail('Relatório Armazenados e Não Expostos', textoDoPeriodo(d)));
-        return;
-      }
+      alvo.innerHTML = `
+        <h3 style="text-align:center">${ui.esc(nomeLoja)} — ${ui.dataBR(campo('dataDia').value)}</h3>
+        <div class="tabela-rolagem"><table>
+          <thead><tr><th>RELATÓRIO</th><th>ID</th><th>DATA CADASTRO</th><th>LOJA</th>
+            <th class="num">QTD ITENS AUDITADOS</th><th>AUDITOR</th><th>ENVIADO EMAIL</th></tr></thead>
+          <tbody>
+            ${d.auditorias.map((a) => `<tr>
+              <td><button type="button" class="botao-pequeno botao-primario"
+                   data-imprimir-dia="${ui.esc(a.id)}">ABRIR</button></td>
+              <td class="mono">${ui.esc(a.id.slice(0, 8))}</td>
+              <td>${ui.dataHoraBR(a.data_cadastro)}</td>
+              <td>${ui.esc(a.loja)}</td>
+              <td class="num">${ui.num(a.qtd_auditada)}</td>
+              <td>${ui.esc(a.remetente)}</td>
+              <td>${a.enviado_email ? 'SIM' : 'NÃO'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table></div>`;
 
+      for (const b of alvo.querySelectorAll('[data-imprimir-dia]')) {
+        b.addEventListener('click', () => imprimirPeriodo(
+          campo('lojaDia').value, campo('dataDia').value, campo('dataDia').value, nomeLoja));
+      }
+    } catch (erro) {
+      alvo.innerHTML = `<div class="erro">${ui.esc(erro.message)}</div>`;
+    }
+  }
+
+  // ---------- Por loja ----------
+  async function consultarLoja() {
+    const alvo = saida('loja');
+    alvo.innerHTML = '<div class="carregando">Consultando…</div>';
+    try {
       const d = await rpc('arm_relatorio_por_loja', {
-        p_inicio: campos('inicioLoja').value,
-        p_fim: campos('fimLoja').value,
+        p_inicio: campo('inicioLoja').value,
+        p_fim: campo('fimLoja').value,
       });
       const max = Math.max(...d.lojas.map((l) => l.qtd_deposito), 1);
-      saida.innerHTML = `
+
+      alvo.innerHTML = `
         <h3 style="text-align:center">POR LOJA - HOLDING</h3>
-        <table>
+        <div class="tabela-rolagem"><table>
           <thead><tr><th>LOJA</th><th class="num">QTD ITENS NO DEPÓSITO</th><th class="num">% DEPÓSITO</th>
             <th></th><th class="num">QTD ITENS AUDITADOS</th></tr></thead>
           <tbody>
@@ -341,21 +372,32 @@ export async function render(raiz, ctx) {
               <td class="num">${ui.num(l.qtd_auditada)}</td>
             </tr>`).join('')}
           </tbody>
-        </table>
+        </table></div>
         <div class="linha-acoes" style="margin-top:14px;justify-content:center">
-          <button type="button" class="botao-azul" id="imprimir">Imprimir</button>
+          <button type="button" class="botao-azul" id="imprimir-loja">Imprimir</button>
         </div>`;
-      saida.querySelector('#imprimir').addEventListener('click', () =>
-        imprimirPorLoja(campos('inicioLoja').value, campos('fimLoja').value));
+      alvo.querySelector('#imprimir-loja').addEventListener('click', () =>
+        imprimirPorLoja(campo('inicioLoja').value, campo('fimLoja').value));
     } catch (erro) {
-      saida.innerHTML = `<div class="erro">${ui.esc(erro.message)}</div>`;
+      alvo.innerHTML = `<div class="erro">${ui.esc(erro.message)}</div>`;
     }
   }
 
-  for (const b of raiz.querySelectorAll('[data-aba]')) {
-    b.addEventListener('click', () => { trocar(b.dataset.aba); pesquisar(); });
+  // ---------- botões Enviar ----------
+  const enviar = {
+    periodo: consultarPeriodo,
+    dia: consultarDia,
+    loja: consultarLoja,
+  };
+
+  for (const b of raiz.querySelectorAll('[data-enviar]')) {
+    b.addEventListener('click', async () => {
+      b.disabled = true;
+      b.textContent = 'Consultando…';
+      try { await enviar[b.dataset.enviar](); }
+      finally { b.disabled = false; b.textContent = 'Enviar'; }
+    });
   }
 
-  trocar('periodo');
-  pesquisar();
+  consultarPeriodo();
 }
