@@ -65,6 +65,11 @@ export async function atualizar(tabela, id, dados) {
   return Array.isArray(data) ? data[0] : data;
 }
 
+export async function excluir(tabela, id) {
+  const { error } = await sb.from(tabela).delete().eq('id', id);
+  if (error) throw new Error(traduzErro(error));
+}
+
 export async function rpc(nome, args = {}) {
   const { data, error } = await sb.rpc(nome, args);
   if (error) throw new Error(traduzErro(error));

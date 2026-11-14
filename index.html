@@ -9,6 +9,34 @@
 </head>
 <body>
   <div id="app"><div class="carregando">Carregando…</div></div>
+
+  <script>
+    // Mostra o erro na tela em vez de deixar "Carregando..." para sempre.
+    (function () {
+      function mostrar(titulo, detalhe) {
+        var app = document.getElementById('app');
+        if (!app) return;
+        app.innerHTML =
+          '<div style="max-width:820px;margin:40px auto;padding:20px;font-family:system-ui">' +
+          '<h2 style="color:#8c1d18">' + titulo + '</h2>' +
+          '<pre style="white-space:pre-wrap;background:#fbe3e1;padding:14px;border-radius:8px">' +
+          String(detalhe).replace(/[<>&]/g, '') + '</pre>' +
+          '<p style="color:#5d6b7e">Recarregue com Ctrl+Shift+R. Se persistir, avise com esta mensagem.</p></div>';
+      }
+      window.addEventListener('error', function (e) {
+        mostrar('Erro ao carregar a aplicação', (e.message || '') + '\n' + (e.filename || '') + ':' + (e.lineno || ''));
+      });
+      window.addEventListener('unhandledrejection', function (e) {
+        mostrar('Erro inesperado', (e.reason && (e.reason.stack || e.reason.message)) || e.reason);
+      });
+      setTimeout(function () {
+        var app = document.getElementById('app');
+        if (app && app.querySelector('.carregando')) {
+          mostrar('A aplicação não iniciou', 'Os módulos não carregaram. Verifique a conexão e recarregue com Ctrl+Shift+R.');
+        }
+      }, 8000);
+    })();
+  </script>
   <script type="module" src="assets/app.js"></script>
 </body>
 </html>
