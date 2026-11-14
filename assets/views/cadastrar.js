@@ -19,6 +19,7 @@ export async function render(raiz, ctx, lojaId) {
     raiz.innerHTML = ui.vazio('Loja não encontrada ou sem acesso.');
     return;
   }
+  ctx.setTitulo(loja.nome);
 
   raiz.innerHTML = `
     <h2 class="titulo-pagina">${ui.esc(loja.nome)}</h2>

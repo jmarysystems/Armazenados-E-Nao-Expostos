@@ -212,6 +212,7 @@ function textoDoPeriodo(d) {
 // Tela
 // ---------------------------------------------------------------------
 export async function render(raiz, ctx) {
+  ctx.setTitulo('Relatórios');
   const lojasTodas = await listar('arm_lojas', { ordem: 'nome' });
   const lojas = ctx.perfil.perfil === 'admin'
     ? lojasTodas
@@ -222,10 +223,10 @@ export async function render(raiz, ctx) {
   raiz.innerHTML = `
     <h2 class="titulo-pagina">Relatórios</h2>
     <div class="cartao">
-      <div class="linha-acoes" style="margin-bottom:12px">
-        <button type="button" class="botao-azul" data-aba="dia">Pesquisar Por Dia</button>
-        <button type="button" class="botao-azul" data-aba="periodo">Pesquisar Por Período</button>
-        <button type="button" class="botao-azul" data-aba="loja">Pesquisar Por Loja</button>
+      <div class="abas">
+        <button type="button" class="aba ativa" data-aba="periodo">Por Período</button>
+        <button type="button" class="aba" data-aba="dia">Por Dia</button>
+        <button type="button" class="aba" data-aba="loja">Por Loja</button>
       </div>
       <div class="grade grade-3" id="filtros-dia">
         ${ui.campoSelect('Loja', 'lojaDia', opcoesLoja, opcoesLoja[0]?.valor, { vazio: '—' })}
@@ -253,6 +254,9 @@ export async function render(raiz, ctx) {
     raiz.querySelector('#filtros-dia').hidden = nova !== 'dia';
     raiz.querySelector('#filtros-periodo').hidden = nova !== 'periodo';
     raiz.querySelector('#filtros-loja').hidden = nova !== 'loja';
+    for (const b of raiz.querySelectorAll('[data-aba]')) {
+      b.classList.toggle('ativa', b.dataset.aba === nova);
+    }
     saida.innerHTML = '';
   }
 

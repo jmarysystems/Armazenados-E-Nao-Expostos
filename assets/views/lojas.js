@@ -3,6 +3,7 @@ import { listar } from '../api.js';
 import * as ui from '../ui.js';
 
 export async function lista(raiz, ctx) {
+  ctx.setTitulo('Armazenados e Não Expostos');
   const todas = await listar('arm_lojas', { ordem: 'nome' });
   const visiveis = ctx.perfil.perfil === 'admin'
     ? todas

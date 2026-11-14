@@ -1,8 +1,12 @@
 // Produtos: catálogo compartilhado com o Cota-Certa, com a classificação do Armazenados.
-import { listar, criar, atualizar } from '../api.js';
+import { listar, criar, atualizar, sb, traduzErro } from '../api.js';
 import * as ui from '../ui.js';
 
+const normaliza = (s) => String(s ?? '').toLowerCase().normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '').trim();
+
 export async function render(raiz, ctx) {
+  ctx.setTitulo('Produtos');
   const podeEditar = ctx.perfil.perfil !== 'auditor';
   const [produtos, categorias] = await Promise.all([
     listar('produtos', { select: '*, arm_categorias(descricao)', ordem: 'sku' }),
@@ -20,12 +24,12 @@ export async function render(raiz, ctx) {
     </tr>`).join('');
 
   raiz.innerHTML = `
-    <h2 class="titulo-pagina">Produtos</h2>
     <div class="cartao">
       <div class="cartao-topo">
-        <h3>${produtos.length} produto(s)</h3>
+        <h2>${produtos.length} produto(s)</h2>
         <div class="linha-acoes">
-          ${podeEditar ? '<button type="button" class="botao-azul" id="nova-categoria">Nova categoria</button>' : ''}
+          ${podeEditar ? '<button type="button" id="importar">Importar planilha</button>' : ''}
+          ${podeEditar ? '<button type="button" id="nova-categoria">Nova categoria</button>' : ''}
           ${podeEditar ? '<button type="button" class="botao-primario" id="novo">Novo produto</button>' : ''}
         </div>
       </div>
@@ -50,6 +54,7 @@ export async function render(raiz, ctx) {
 
   raiz.querySelector('#novo')?.addEventListener('click', () => abrir({}));
   raiz.querySelector('#nova-categoria')?.addEventListener('click', () => modalCategoria(ctx));
+  raiz.querySelector('#importar')?.addEventListener('click', () => modalImportar(categorias, ctx));
 
   for (const b of raiz.querySelectorAll('[data-editar]')) {
     b.addEventListener('click', () => abrir(produtos.find((p) => p.id === b.dataset.editar) || {}));
@@ -130,6 +135,107 @@ function modalCategoria(ctx) {
       ctx.recarregar();
     } catch (erro) {
       ui.toast(erro.message, 'erro');
+    }
+  });
+}
+
+function modalImportar(categorias, ctx) {
+  const { fechar, corpo } = ui.modal({
+    titulo: 'Importar produtos',
+    largura: '640px',
+    corpo: `
+      <p class="sub">Planilha com as colunas <strong>SKU</strong>, <strong>EAN</strong> (opcional),
+      <strong>Descrição</strong>, <strong>Unidade</strong> e <strong>Categoria</strong>.
+      Categoria que ainda não existir é criada na hora. Aceita .xlsx, .xls e .csv.</p>
+      <form id="form-imp">
+        <label class="campo"><span>Arquivo *</span>
+          <input type="file" name="arquivo" accept=".xlsx,.xls,.csv" required></label>
+        <div class="linha-acoes">
+          <button type="submit" class="botao-primario">Importar</button>
+          <button type="button" id="cancelar">Cancelar</button>
+        </div>
+      </form>
+      <div id="resultado"></div>`,
+  });
+
+  corpo.querySelector('#cancelar').addEventListener('click', fechar);
+
+  corpo.querySelector('#form-imp').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const botao = ev.target.querySelector('button[type="submit"]');
+    const arquivo = ev.target.arquivo.files[0];
+    if (!arquivo) return;
+    botao.disabled = true;
+    botao.textContent = 'Lendo…';
+
+    try {
+      const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs');
+      const bytes = new Uint8Array(await arquivo.arrayBuffer());
+      const wb = XLSX.read(bytes, { type: 'array' });
+      const bruto = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+      if (!bruto.length) throw new Error('A planilha está vazia.');
+
+      const mapa = {};
+      for (const col of Object.keys(bruto[0])) {
+        const n = normaliza(col);
+        if (n === 'sku' || n === 'codigo') mapa.sku = col;
+        else if (n === 'ean' || n === 'codigo de barras') mapa.ean = col;
+        else if (n.startsWith('descri') || n === 'produto') mapa.descricao = col;
+        else if (['unidade', 'un', 'und'].includes(n)) mapa.unidade = col;
+        else if (n === 'categoria') mapa.categoria = col;
+      }
+      if (!mapa.sku) throw new Error('Não encontrei a coluna "SKU".');
+      if (!mapa.descricao) throw new Error('Não encontrei a coluna "Descrição".');
+
+      let inseridos = 0;
+      const erros = [];
+
+      for (const linha of bruto) {
+        const sku = String(linha[mapa.sku] ?? '').trim();
+        const descricao = String(linha[mapa.descricao] ?? '').trim();
+        if (!sku || !descricao) continue;
+
+        const nomeCategoria = mapa.categoria ? String(linha[mapa.categoria] ?? '').trim() : '';
+        let categoriaId = null;
+
+        if (nomeCategoria) {
+          let achada = categorias.find((c) => normaliza(c.descricao) === normaliza(nomeCategoria));
+          if (!achada) {
+            try {
+              achada = await criar('arm_categorias', { descricao: nomeCategoria });
+              categorias.push(achada);
+            } catch (_) { achada = null; }
+          }
+          categoriaId = achada ? achada.id : null;
+        }
+
+        const { error } = await sb.from('produtos').insert({
+          sku,
+          ean: mapa.ean ? String(linha[mapa.ean] ?? '').trim() || null : null,
+          descricao,
+          unidade: mapa.unidade ? String(linha[mapa.unidade] ?? '').trim() || 'UN' : 'UN',
+          categoria_id: categoriaId,
+          origem: 'armazenados',
+        });
+
+        if (error) erros.push(`${sku}: ${traduzErro(error)}`);
+        else inseridos += 1;
+      }
+
+      corpo.querySelector('#resultado').innerHTML = `
+        <div class="cartao" style="box-shadow:none;margin-top:14px">
+          <h3>Resultado</h3>
+          <p><strong>${inseridos}</strong> produto(s) importado(s).</p>
+          ${erros.length ? `<div class="aviso">${erros.length} linha(s) com problema:<br>
+            ${ui.esc(erros.slice(0, 8).join(' · '))}${erros.length > 8 ? ' …' : ''}</div>` : ''}
+        </div>`;
+      botao.hidden = true;
+      ui.toast('Importação concluída.');
+      ctx.recarregar();
+    } catch (erro) {
+      ui.toast(erro.message, 'erro');
+      botao.disabled = false;
+      botao.textContent = 'Importar';
     }
   });
 }
