@@ -113,14 +113,18 @@ async function render(raiz, ctx, chave) {
   }
 
   function modalImportar() {
-    const colunasPai = cfg.pais.map((p) => p.rotulo).join(', ');
+    const instrucao = chave === 'categorias'
+      ? '<strong>Código auxiliar</strong> (opcional) e <strong>Descrição</strong>'
+      : chave === 'subcategorias'
+        ? '<strong>Código auxiliar</strong> (opcional), <strong>Descrição</strong> e <strong>Código auxiliar da categoria</strong>'
+        : '<strong>Código auxiliar</strong> (opcional), <strong>Descrição</strong>, <strong>Código auxiliar da categoria</strong> e <strong>Código auxiliar da subcategoria</strong>';
+
     const { fechar, corpo } = ui.modal({
       titulo: `Importar ${cfg.titulo.toLowerCase()}`,
       largura: '620px',
       corpo: `
-        <p class="sub">Planilha com as colunas <strong>Código auxiliar</strong> (opcional),
-        <strong>Descrição</strong>${colunasPai ? ` e <strong>${ui.esc(colunasPai)}</strong>` : ''}.
-        Aceita .xlsx, .xls e .csv.</p>
+        <p class="sub">Planilha com as colunas ${instrucao}. Aceita .xlsx, .xls e .csv.
+        ${chave !== 'categorias' ? 'A categoria (e a subcategoria) precisa existir antes — a conferência é feita pelo código auxiliar.' : ''}</p>
         <form id="form-imp">
           <label class="campo"><span>Arquivo *</span>
             <input type="file" name="arquivo" accept=".xlsx,.xls,.csv" required></label>
@@ -152,16 +156,20 @@ async function render(raiz, ctx, chave) {
         for (const col of Object.keys(bruto[0])) {
           const n = normaliza(col);
           if (n === 'descricao' || n.startsWith('descri')) mapa.descricao = col;
+          else if (n.includes('codigo auxiliar da categoria') || n.includes('codigo auxiliar categoria')
+                   || n === 'codigo da categoria' || n === 'cod categoria') mapa.catCodigo = col;
+          else if (n.includes('codigo auxiliar da subcategoria') || n.includes('codigo auxiliar subcategoria')
+                   || n === 'codigo da subcategoria' || n === 'cod subcategoria') mapa.subCodigo = col;
           else if (['codigo auxiliar', 'codigo', 'cod'].includes(n)) mapa.codigo = col;
           else if (n === 'categoria') mapa.categoria = col;
           else if (n === 'subcategoria') mapa.subcategoria = col;
         }
         if (!mapa.descricao) throw new Error('Não encontrei a coluna "Descrição".');
 
-        const acharPai = (tabela, nome) => {
-          if (!nome) return null;
-          const achado = listaPais[tabela].find((x) => normaliza(x.descricao) === normaliza(nome));
-          return achado ? achado.id : null;
+        const porCodigo = (tabela, codigo) => {
+          const alvo = normaliza(codigo);
+          if (!alvo) return null;
+          return listaPais[tabela].find((x) => normaliza(x.codigo_auxiliar) === alvo) || null;
         };
 
         let inseridos = 0;
@@ -177,16 +185,27 @@ async function render(raiz, ctx, chave) {
           };
 
           if (chave !== 'categorias') {
-            const pai = acharPai('arm_categorias', String(linha[mapa.categoria] ?? '').trim());
-            if (!pai) { erros.push(`${descricao}: categoria não encontrada`); continue; }
-            values.categoria_id = pai;
+            const codCat = String(linha[mapa.catCodigo] ?? '').trim();
+            if (!codCat) { erros.push(`${descricao}: código auxiliar da categoria não informado`); continue; }
+            const pai = porCodigo('arm_categorias', codCat);
+            if (!pai) { erros.push(`${descricao}: nenhuma categoria com o código ${codCat}`); continue; }
+            values.categoria_id = pai.id;
           }
+
           if (chave === 'familias') {
-            const sub = String(linha[mapa.subcategoria] ?? '').trim();
-            const achada = listaPais.arm_subcategorias.find((x) => normaliza(x.descricao) === normaliza(sub));
-            if (!achada) { erros.push(`${descricao}: subcategoria não encontrada`); continue; }
-            values.subcategoria_id = achada.id;
+            const codSub = String(linha[mapa.subCodigo] ?? '').trim();
+            if (!codSub) { erros.push(`${descricao}: código auxiliar da subcategoria não informado`); continue; }
+            const sub = porCodigo('arm_subcategorias', codSub);
+            if (!sub || sub.categoria_id !== values.categoria_id) {
+              erros.push(`${descricao}: nenhuma subcategoria com o código ${codSub} nesta categoria`);
+              continue;
+            }
+            values.subcategoria_id = sub.id;
           }
+
+          const jaExiste = dados.some((x) => normaliza(x.descricao) === normaliza(descricao)
+            && cfg.pais.every((p) => x[p.campo] === values[p.campo]));
+          if (jaExiste) { erros.push(`${descricao}: já existe`); continue; }
 
           const { error } = await sb.from(cfg.tabela).insert(values);
           if (error) erros.push(`${descricao}: ${traduzErro(error)}`);
