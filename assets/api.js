@@ -10,6 +10,7 @@ const TRADUCOES = [
   ['Invalid login credentials', 'CPF/CNPJ ou senha inválidos.'],
   ['Email not confirmed', 'Este login ainda não foi confirmado.'],
   ['row-level security', 'Seu perfil não tem permissão para esta ação.'],
+  ['codigo_uq', 'Este código auxiliar já está em uso.'],
   ['duplicate key value', 'Já existe um registro com este valor.'],
   ['Usuário sem acesso ao Armazenados', 'Seu usuário não tem acesso ao Armazenados.'],
   ['Sem acesso a esta loja', 'Você não tem acesso a esta loja.'],

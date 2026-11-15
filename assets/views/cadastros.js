@@ -83,7 +83,7 @@ async function render(raiz, ctx, chave) {
       titulo: editando ? `Editar ${cfg.singular}` : `Nova ${cfg.singular}`,
       corpo: `
         <form id="form" class="grade grade-2">
-          ${ui.campoTexto('Código auxiliar', 'codigo_auxiliar', registro?.codigo_auxiliar || '', { placeholder: 'opcional' })}
+          ${ui.campoTexto('Código auxiliar', 'codigo_auxiliar', registro?.codigo_auxiliar || '', { placeholder: 'em branco = ID do registro' })}
           ${ui.campoTexto('Descrição', 'descricao', registro?.descricao || '', { obrigatorio: true })}
           ${camposPai}
           <div class="linha-acoes campo-largo">
@@ -114,10 +114,10 @@ async function render(raiz, ctx, chave) {
 
   function modalImportar() {
     const instrucao = chave === 'categorias'
-      ? '<strong>Código auxiliar</strong> (opcional) e <strong>Descrição</strong>'
+      ? '<strong>Código auxiliar</strong> (em branco = ID do registro) e <strong>Descrição</strong>'
       : chave === 'subcategorias'
-        ? '<strong>Código auxiliar</strong> (opcional), <strong>Descrição</strong> e <strong>Código auxiliar da categoria</strong>'
-        : '<strong>Código auxiliar</strong> (opcional), <strong>Descrição</strong>, <strong>Código auxiliar da categoria</strong> e <strong>Código auxiliar da subcategoria</strong>';
+        ? '<strong>Código auxiliar</strong> (em branco = ID do registro), <strong>Descrição</strong> e <strong>Código auxiliar da categoria</strong>'
+        : '<strong>Código auxiliar</strong> (em branco = ID do registro), <strong>Descrição</strong>, <strong>Código auxiliar da categoria</strong> e <strong>Código auxiliar da subcategoria</strong>';
 
     const { fechar, corpo } = ui.modal({
       titulo: `Importar ${cfg.titulo.toLowerCase()}`,

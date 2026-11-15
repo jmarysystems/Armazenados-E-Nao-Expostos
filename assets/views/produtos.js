@@ -112,7 +112,7 @@ function modalCategoria(ctx) {
     titulo: 'Nova categoria',
     corpo: `
       <form id="form-categoria">
-        ${ui.campoTexto('Código auxiliar', 'codigo_auxiliar', '', { placeholder: 'opcional' })}
+        ${ui.campoTexto('Código auxiliar', 'codigo_auxiliar', '', { placeholder: 'em branco = ID do registro' })}
         ${ui.campoTexto('Descrição', 'descricao', '', { obrigatorio: true })}
         <div class="linha-acoes">
           <button type="submit" class="botao-primario">Criar</button>
