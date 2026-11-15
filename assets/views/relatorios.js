@@ -222,12 +222,12 @@ export async function render(raiz, ctx) {
   raiz.innerHTML = `
     <div class="cartao">
       <div class="abas">
-        <button type="button" class="aba ativa" data-aba="periodo">Por Período</button>
-        <button type="button" class="aba" data-aba="dia">Por Dia</button>
+        <button type="button" class="aba" data-aba="periodo">Por Período</button>
+        <button type="button" class="aba ativa" data-aba="dia">Por Dia</button>
         <button type="button" class="aba" data-aba="loja">Por Loja</button>
       </div>
 
-      <section data-painel="periodo">
+      <section data-painel="periodo" hidden>
         <div class="grade grade-3">
           ${ui.campoSelect('Loja', 'lojaPeriodo', opcoesLoja, primeira, { vazio: '—' })}
           ${ui.campoTexto('Data Inicial', 'inicio', primeiroDiaDoAno(), { tipo: 'date' })}
@@ -237,12 +237,15 @@ export async function render(raiz, ctx) {
         <div data-saida="periodo"></div>
       </section>
 
-      <section data-painel="dia" hidden>
+      <section data-painel="dia">
         <div class="grade grade-2">
           ${ui.campoSelect('Loja', 'lojaDia', opcoesLoja, primeira, { vazio: '—' })}
           ${ui.campoTexto('Data', 'dataDia', hojeISO(), { tipo: 'date' })}
         </div>
-        <div class="linha-acoes"><button type="button" class="botao-primario" data-enviar="dia">Enviar</button></div>
+        <div class="linha-acoes">
+          <button type="button" class="botao-primario" data-enviar="dia">Enviar</button>
+          <button type="button" class="botao" data-enviar="ultimos">Últimos 10</button>
+        </div>
         <div data-saida="dia"></div>
       </section>
 
@@ -296,6 +299,43 @@ export async function render(raiz, ctx) {
     }
   }
 
+  // ---------- Lista de auditorias ----------
+  const isoDoDia = (v) => {
+    const d = new Date(v);
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  };
+
+  function tabelaAuditorias(rows) {
+    return `
+      <div class="tabela-rolagem"><table>
+        <thead><tr><th>RELATÓRIO</th><th>ID</th><th>DATA CADASTRO</th><th>LOJA</th>
+          <th class="num">QTD ITENS AUDITADOS</th><th>AUDITOR</th><th>ENVIADO EMAIL</th></tr></thead>
+        <tbody>
+          ${rows.map((a) => `<tr data-loja="${ui.esc(a.loja)}" data-dia="${ui.esc(isoDoDia(a.data_cadastro))}">
+            <td><button type="button" class="botao-pequeno botao-primario"
+                 data-abrir="${ui.esc(a.id)}">ABRIR</button></td>
+            <td class="mono">${ui.esc(a.id.slice(0, 8))}</td>
+            <td>${ui.dataHoraBR(a.data_cadastro)}</td>
+            <td>${ui.esc(a.loja)}</td>
+            <td class="num">${ui.num(a.qtd_auditada)}</td>
+            <td>${ui.esc(a.remetente)}</td>
+            <td>${a.enviado_email ? 'SIM' : 'NÃO'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>`;
+  }
+
+  function ligarAbrir(alvo) {
+    for (const b of alvo.querySelectorAll('[data-abrir]')) {
+      const tr = b.closest('tr');
+      b.addEventListener('click', () => {
+        const loja = lojas.find((l) => l.nome === tr.dataset.loja);
+        imprimirPeriodo(loja?.id || '', tr.dataset.dia, tr.dataset.dia, tr.dataset.loja);
+      });
+    }
+  }
+
   // ---------- Por dia ----------
   async function consultarDia() {
     const alvo = saida('dia');
@@ -315,27 +355,27 @@ export async function render(raiz, ctx) {
 
       alvo.innerHTML = `
         <h3 style="text-align:center">${ui.esc(nomeLoja)} — ${ui.dataBR(campo('dataDia').value)}</h3>
-        <div class="tabela-rolagem"><table>
-          <thead><tr><th>RELATÓRIO</th><th>ID</th><th>DATA CADASTRO</th><th>LOJA</th>
-            <th class="num">QTD ITENS AUDITADOS</th><th>AUDITOR</th><th>ENVIADO EMAIL</th></tr></thead>
-          <tbody>
-            ${d.auditorias.map((a) => `<tr>
-              <td><button type="button" class="botao-pequeno botao-primario"
-                   data-imprimir-dia="${ui.esc(a.id)}">ABRIR</button></td>
-              <td class="mono">${ui.esc(a.id.slice(0, 8))}</td>
-              <td>${ui.dataHoraBR(a.data_cadastro)}</td>
-              <td>${ui.esc(a.loja)}</td>
-              <td class="num">${ui.num(a.qtd_auditada)}</td>
-              <td>${ui.esc(a.remetente)}</td>
-              <td>${a.enviado_email ? 'SIM' : 'NÃO'}</td>
-            </tr>`).join('')}
-          </tbody>
-        </table></div>`;
+        ${tabelaAuditorias(d.auditorias)}`;
+      ligarAbrir(alvo);
+    } catch (erro) {
+      alvo.innerHTML = `<div class="erro">${ui.esc(erro.message)}</div>`;
+    }
+  }
 
-      for (const b of alvo.querySelectorAll('[data-imprimir-dia]')) {
-        b.addEventListener('click', () => imprimirPeriodo(
-          campo('lojaDia').value, campo('dataDia').value, campo('dataDia').value, nomeLoja));
+  // ---------- Últimos 10 ----------
+  async function consultarUltimos() {
+    const alvo = saida('dia');
+    alvo.innerHTML = '<div class="carregando">Consultando…</div>';
+    try {
+      const d = await rpc('arm_relatorio_ultimos', { p_limite: 10 });
+      if (!d.auditorias.length) {
+        alvo.innerHTML = ui.vazio('Nenhuma auditoria registrada ainda.');
+        return;
       }
+      alvo.innerHTML = `
+        <h3 style="text-align:center">Últimos ${d.auditorias.length} relatórios</h3>
+        ${tabelaAuditorias(d.auditorias)}`;
+      ligarAbrir(alvo);
     } catch (erro) {
       alvo.innerHTML = `<div class="erro">${ui.esc(erro.message)}</div>`;
     }
@@ -388,6 +428,7 @@ export async function render(raiz, ctx) {
     periodo: consultarPeriodo,
     dia: consultarDia,
     loja: consultarLoja,
+    ultimos: consultarUltimos,
   };
 
   for (const b of raiz.querySelectorAll('[data-enviar]')) {
@@ -399,5 +440,5 @@ export async function render(raiz, ctx) {
     });
   }
 
-  consultarPeriodo();
+  consultarUltimos();
 }
