@@ -1,6 +1,6 @@
 // Categorias, subcategorias e famílias (mesmo padrão da tela de produtos).
-import { listar, criar, atualizar, excluir, sb, traduzErro } from '../api.js';
-import * as ui from '../ui.js';
+import { listar, criar, atualizar, excluir, sb, traduzErro } from '../api.js?v=20261116a';
+import * as ui from '../ui.js?v=20261116a';
 
 const DEF = {
   categorias: {

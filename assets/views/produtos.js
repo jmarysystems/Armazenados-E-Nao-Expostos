@@ -1,6 +1,6 @@
 // Produtos: catálogo compartilhado com o Cota-Certa, com a classificação do Armazenados.
-import { listar, criar, atualizar, sb, traduzErro } from '../api.js';
-import * as ui from '../ui.js';
+import { listar, criar, atualizar, sb, traduzErro } from '../api.js?v=20261116a';
+import * as ui from '../ui.js?v=20261116a';
 
 const normaliza = (s) => String(s ?? '').toLowerCase().normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '').trim();
