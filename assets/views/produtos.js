@@ -1,6 +1,6 @@
 // Produtos: catálogo compartilhado com o Cota-Certa, com a classificação do Armazenados.
-import { listar, criar, atualizar, sb, traduzErro } from '../api.js?v=20261116b';
-import * as ui from '../ui.js?v=20261116b';
+import { listar, criar, atualizar, sb, traduzErro } from '../api.js?v=20261116c';
+import * as ui from '../ui.js?v=20261116c';
 
 const normaliza = (s) => String(s ?? '').toLowerCase().normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '').trim();
@@ -198,11 +198,12 @@ function modalCategoria(ctx) {
 function modalImportar(categorias, ctx) {
   const { fechar, corpo } = ui.modal({
     titulo: 'Importar produtos',
-    largura: '640px',
+    largura: '660px',
     corpo: `
       <p class="sub">Planilha com as colunas <strong>SKU</strong>, <strong>EAN</strong> (opcional),
-      <strong>Descrição</strong>, <strong>Unidade</strong> e <strong>Categoria</strong>.
-      Categoria que ainda não existir é criada na hora. Aceita .xlsx, .xls e .csv.</p>
+      <strong>Descrição</strong>, <strong>Unidade</strong>, <strong>Código da Categoria</strong> e
+      <strong>Descrição da Categoria</strong>. A categoria é procurada pelo código; se não existir,
+      é criada com a descrição informada. Aceita .xlsx, .xls e .csv.</p>
       <form id="form-imp">
         <label class="campo"><span>Arquivo *</span>
           <input type="file" name="arquivo" accept=".xlsx,.xls,.csv" required></label>
@@ -233,44 +234,66 @@ function modalImportar(categorias, ctx) {
 
       const mapa = {};
       for (const col of Object.keys(bruto[0])) {
-        const n = normaliza(col);
-        if (n === 'sku' || n === 'codigo') mapa.sku = col;
-        else if (n === 'ean' || n === 'codigo de barras') mapa.ean = col;
-        else if (n.startsWith('descri') || n === 'produto') mapa.descricao = col;
-        else if (['unidade', 'un', 'und'].includes(n)) mapa.unidade = col;
-        else if (n === 'categoria') mapa.categoria = col;
+        const n = normaliza(col).replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+        if (n.includes('categoria')) {
+          if (n.includes('codigo')) mapa.catCodigo = col;
+          else mapa.catDescricao = col;
+        } else if (n === 'sku' || n === 'codigo' || n === 'codigo auxiliar') {
+          mapa.sku = col;
+        } else if (n === 'ean' || n.includes('codigo de barras')) {
+          mapa.ean = col;
+        } else if (n.startsWith('descri') || n === 'produto') {
+          mapa.descricao = col;
+        } else if (['unidade', 'un', 'und'].includes(n)) {
+          mapa.unidade = col;
+        }
       }
       if (!mapa.sku) throw new Error('Não encontrei a coluna "SKU".');
       if (!mapa.descricao) throw new Error('Não encontrei a coluna "Descrição".');
 
       let inseridos = 0;
+      let criadas = 0;
       const erros = [];
+
+      async function acharCategoria(cod, nome) {
+        let cat = cod
+          ? categorias.find((c) => normaliza(c.codigo_auxiliar) === normaliza(cod))
+          : null;
+        if (!cat && nome) {
+          cat = categorias.find((c) => normaliza(c.descricao) === normaliza(nome)) || null;
+        }
+        if (cat) return cat;
+        if (!cod && !nome) return null;
+        try {
+          const nova = await criar('arm_categorias', {
+            descricao: nome || `Categoria ${cod}`,
+            codigo_auxiliar: cod || null,
+          });
+          categorias.push(nova);
+          criadas += 1;
+          return nova;
+        } catch (e) {
+          erros.push(`${nome || cod}: categoria não criada — ${traduzErro(e)}`);
+          return null;
+        }
+      }
 
       for (const linha of bruto) {
         const sku = String(linha[mapa.sku] ?? '').trim();
         const descricao = String(linha[mapa.descricao] ?? '').trim();
         if (!sku || !descricao) continue;
 
-        const nomeCategoria = mapa.categoria ? String(linha[mapa.categoria] ?? '').trim() : '';
-        let categoriaId = null;
+        const codCat = mapa.catCodigo ? String(linha[mapa.catCodigo] ?? '').trim() : '';
+        const nomeCat = mapa.catDescricao ? String(linha[mapa.catDescricao] ?? '').trim() : '';
 
-        if (nomeCategoria) {
-          let achada = categorias.find((c) => normaliza(c.descricao) === normaliza(nomeCategoria));
-          if (!achada) {
-            try {
-              achada = await criar('arm_categorias', { descricao: nomeCategoria });
-              categorias.push(achada);
-            } catch (_) { achada = null; }
-          }
-          categoriaId = achada ? achada.id : null;
-        }
+        const cat = await acharCategoria(codCat, nomeCat);
 
         const { error } = await sb.from('produtos').insert({
           sku,
           ean: mapa.ean ? String(linha[mapa.ean] ?? '').trim() || null : null,
           descricao,
           unidade: mapa.unidade ? String(linha[mapa.unidade] ?? '').trim() || 'UN' : 'UN',
-          categoria_id: categoriaId,
+          categoria_id: cat ? cat.id : null,
           origem: 'armazenados',
         });
 
@@ -282,6 +305,7 @@ function modalImportar(categorias, ctx) {
         <div class="cartao" style="box-shadow:none;margin-top:14px">
           <h3>Resultado</h3>
           <p><strong>${inseridos}</strong> produto(s) importado(s).</p>
+          ${criadas ? `<p class="sub">${criadas} categoria(s) criada(s) automaticamente.</p>` : ''}
           ${erros.length ? `<div class="aviso">${erros.length} linha(s) com problema:<br>
             ${ui.esc(erros.slice(0, 8).join(' · '))}${erros.length > 8 ? ' …' : ''}</div>` : ''}
         </div>`;

@@ -1,6 +1,6 @@
 // Relatórios: por dia, por período e por loja (holding) + impressão e envio.
-import { listar, rpc } from '../api.js?v=20261116b';
-import * as ui from '../ui.js?v=20261116b';
+import { listar, rpc } from '../api.js?v=20261116c';
+import * as ui from '../ui.js?v=20261116c';
 
 const hojeISO = () => {
   const d = new Date();
