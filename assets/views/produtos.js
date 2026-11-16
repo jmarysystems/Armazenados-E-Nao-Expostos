@@ -1,6 +1,6 @@
 // Produtos: catálogo compartilhado com o Cota-Certa, com a classificação do Armazenados.
-import { listar, criar, atualizar, sb, traduzErro } from '../api.js?v=20261116c';
-import * as ui from '../ui.js?v=20261116c';
+import { listar, criar, atualizar, sb, traduzErro } from '../api.js?v=20261116d';
+import * as ui from '../ui.js?v=20261116d';
 
 const normaliza = (s) => String(s ?? '').toLowerCase().normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '').trim();
@@ -57,7 +57,7 @@ export async function render(raiz, ctx) {
 
   raiz.querySelector('#novo')?.addEventListener('click', () => abrir({}));
   raiz.querySelector('#nova-categoria')?.addEventListener('click', () => modalCategoria(ctx));
-  raiz.querySelector('#importar')?.addEventListener('click', () => modalImportar(categorias, ctx));
+  raiz.querySelector('#importar')?.addEventListener('click', () => modalImportar(listas, ctx));
 
   for (const b of raiz.querySelectorAll('[data-editar]')) {
     b.addEventListener('click', () => abrir(produtos.find((p) => p.id === b.dataset.editar) || {}));
@@ -195,15 +195,21 @@ function modalCategoria(ctx) {
   });
 }
 
-function modalImportar(categorias, ctx) {
+function modalImportar(listas, ctx) {
+  const { categorias, subcategorias, familias } = listas;
+
   const { fechar, corpo } = ui.modal({
     titulo: 'Importar produtos',
-    largura: '660px',
+    largura: '700px',
     corpo: `
-      <p class="sub">Planilha com as colunas <strong>SKU</strong>, <strong>EAN</strong> (opcional),
-      <strong>Descrição</strong>, <strong>Unidade</strong>, <strong>Código da Categoria</strong> e
-      <strong>Descrição da Categoria</strong>. A categoria é procurada pelo código; se não existir,
-      é criada com a descrição informada. Aceita .xlsx, .xls e .csv.</p>
+      <p class="sub">Planilha com as colunas <strong>SKU</strong>, <strong>EAN</strong>,
+      <strong>Descrição</strong>, <strong>Unidade</strong>, <strong>Código da Categoria</strong>,
+      <strong>Descrição da Categoria</strong>, <strong>Código da Subcategoria</strong>,
+      <strong>Descrição da Subcategoria</strong>, <strong>Código da Família</strong> e
+      <strong>Descrição da Família</strong>.</p>
+      <p class="sub">O <strong>EAN é obrigatório e não pode repetir</strong>. Se o SKU já existir,
+      o produto é atualizado em vez de duplicado. Categoria, subcategoria e família são
+      procuradas pelo código e criadas quando não existirem.</p>
       <form id="form-imp">
         <label class="campo"><span>Arquivo *</span>
           <input type="file" name="arquivo" accept=".xlsx,.xls,.csv" required></label>
@@ -235,77 +241,179 @@ function modalImportar(categorias, ctx) {
       const mapa = {};
       for (const col of Object.keys(bruto[0])) {
         const n = normaliza(col).replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
-        if (n.includes('categoria')) {
+        if (n === 'sku' || n === 'codigo' || n === 'codigo auxiliar') mapa.sku = col;
+        else if (n === 'ean' || n.includes('codigo de barras')) mapa.ean = col;
+        else if (['unidade', 'un', 'und', 'um'].includes(n)) mapa.unidade = col;
+        else if (n.includes('subcategoria')) {
+          if (n.includes('codigo')) mapa.subCodigo = col;
+          else mapa.subDescricao = col;
+        } else if (n.includes('familia')) {
+          if (n.includes('codigo')) mapa.famCodigo = col;
+          else mapa.famDescricao = col;
+        } else if (n.includes('categoria')) {
           if (n.includes('codigo')) mapa.catCodigo = col;
           else mapa.catDescricao = col;
-        } else if (n === 'sku' || n === 'codigo' || n === 'codigo auxiliar') {
-          mapa.sku = col;
-        } else if (n === 'ean' || n.includes('codigo de barras')) {
-          mapa.ean = col;
-        } else if (n.startsWith('descri') || n === 'produto') {
-          mapa.descricao = col;
-        } else if (['unidade', 'un', 'und'].includes(n)) {
-          mapa.unidade = col;
-        }
+        } else if (n.startsWith('descri') || n === 'produto') mapa.descricao = col;
       }
+
       if (!mapa.sku) throw new Error('Não encontrei a coluna "SKU".');
+      if (!mapa.ean) throw new Error('Não encontrei a coluna "EAN".');
       if (!mapa.descricao) throw new Error('Não encontrei a coluna "Descrição".');
 
-      let inseridos = 0;
-      let criadas = 0;
       const erros = [];
+      let criadasCat = 0;
+      let criadasSub = 0;
+      let criadasFam = 0;
 
-      async function acharCategoria(cod, nome) {
-        let cat = cod
-          ? categorias.find((c) => normaliza(c.codigo_auxiliar) === normaliza(cod))
-          : null;
-        if (!cat && nome) {
-          cat = categorias.find((c) => normaliza(c.descricao) === normaliza(nome)) || null;
-        }
-        if (cat) return cat;
+      const porCodigo = (lista, codigo) => {
+        const alvo = normaliza(codigo);
+        if (!alvo) return null;
+        return lista.find((x) => normaliza(x.codigo_auxiliar) === alvo) || null;
+      };
+      const porDescricao = (lista, descricao) => {
+        const alvo = normaliza(descricao);
+        if (!alvo) return null;
+        return lista.find((x) => normaliza(x.descricao) === alvo) || null;
+      };
+
+      async function garantirCategoria(cod, nome) {
         if (!cod && !nome) return null;
+        let cat = porCodigo(categorias, cod) || porDescricao(categorias, nome);
+        if (cat) return cat;
+        if (!cod) return null;
         try {
-          const nova = await criar('arm_categorias', {
+          cat = await criar('arm_categorias', {
             descricao: nome || `Categoria ${cod}`,
-            codigo_auxiliar: cod || null,
+            codigo_auxiliar: cod,
           });
-          categorias.push(nova);
-          criadas += 1;
-          return nova;
+          categorias.push(cat);
+          criadasCat += 1;
+          return cat;
         } catch (e) {
-          erros.push(`${nome || cod}: categoria não criada — ${traduzErro(e)}`);
+          erros.push(`categoria ${cod}: ${traduzErro(e)}`);
           return null;
         }
       }
 
+      async function garantirSubcategoria(cod, nome, categoriaId) {
+        if (!cod && !nome) return null;
+        let sub = porCodigo(subcategorias, cod);
+        if (!sub && nome) {
+          sub = subcategorias.find((x) => normaliza(x.descricao) === normaliza(nome)
+            && x.categoria_id === categoriaId) || null;
+        }
+        if (sub) return sub;
+        if (!cod) return null;
+        try {
+          sub = await criar('arm_subcategorias', {
+            descricao: nome || `Subcategoria ${cod}`,
+            codigo_auxiliar: cod,
+            categoria_id: categoriaId,
+          });
+          subcategorias.push(sub);
+          criadasSub += 1;
+          return sub;
+        } catch (e) {
+          erros.push(`subcategoria ${cod}: ${traduzErro(e)}`);
+          return null;
+        }
+      }
+
+      async function garantirFamilia(cod, nome, categoriaId, subcategoriaId) {
+        if (!cod && !nome) return null;
+        let fam = porCodigo(familias, cod);
+        if (!fam && nome) {
+          fam = familias.find((x) => normaliza(x.descricao) === normaliza(nome)
+            && x.subcategoria_id === subcategoriaId) || null;
+        }
+        if (fam) return fam;
+        if (!cod) return null;
+        try {
+          fam = await criar('arm_familias', {
+            descricao: nome || `Família ${cod}`,
+            codigo_auxiliar: cod,
+            categoria_id: categoriaId,
+            subcategoria_id: subcategoriaId,
+          });
+          familias.push(fam);
+          criadasFam += 1;
+          return fam;
+        } catch (e) {
+          erros.push(`família ${cod}: ${traduzErro(e)}`);
+          return null;
+        }
+      }
+
+      // SKUs que já existem (para separar inseridos de atualizados)
+      const existentes = await listar('produtos', { select: 'sku' });
+      const skus = new Set(existentes.map((p) => String(p.sku).trim().toUpperCase()));
+
+      botao.textContent = 'Importando…';
+
+      const linhas = [];
       for (const linha of bruto) {
         const sku = String(linha[mapa.sku] ?? '').trim();
+        const ean = String(linha[mapa.ean] ?? '').trim();
         const descricao = String(linha[mapa.descricao] ?? '').trim();
-        if (!sku || !descricao) continue;
+        if (!sku && !ean && !descricao) continue;
+
+        if (!sku) { erros.push('linha sem SKU'); continue; }
+        if (!descricao) { erros.push(`${sku}: sem descrição`); continue; }
+        if (!ean) { erros.push(`${sku}: EAN obrigatório`); continue; }
 
         const codCat = mapa.catCodigo ? String(linha[mapa.catCodigo] ?? '').trim() : '';
         const nomeCat = mapa.catDescricao ? String(linha[mapa.catDescricao] ?? '').trim() : '';
+        const codSub = mapa.subCodigo ? String(linha[mapa.subCodigo] ?? '').trim() : '';
+        const nomeSub = mapa.subDescricao ? String(linha[mapa.subDescricao] ?? '').trim() : '';
+        const codFam = mapa.famCodigo ? String(linha[mapa.famCodigo] ?? '').trim() : '';
+        const nomeFam = mapa.famDescricao ? String(linha[mapa.famDescricao] ?? '').trim() : '';
 
-        const cat = await acharCategoria(codCat, nomeCat);
+        const cat = await garantirCategoria(codCat, nomeCat);
+        const sub = cat ? await garantirSubcategoria(codSub, nomeSub, cat.id) : null;
+        const fam = sub ? await garantirFamilia(codFam, nomeFam, cat.id, sub.id) : null;
 
-        const { error } = await sb.from('produtos').insert({
+        linhas.push({
           sku,
-          ean: mapa.ean ? String(linha[mapa.ean] ?? '').trim() || null : null,
+          ean,
           descricao,
           unidade: mapa.unidade ? String(linha[mapa.unidade] ?? '').trim() || 'UN' : 'UN',
           categoria_id: cat ? cat.id : null,
-          origem: 'armazenados',
+          subcategoria_id: sub ? sub.id : null,
+          familia_id: fam ? fam.id : null,
+          origem: 'importacao',
         });
+      }
 
-        if (error) erros.push(`${sku}: ${traduzErro(error)}`);
-        else inseridos += 1;
+      let inseridos = 0;
+      let atualizados = 0;
+      const TAMANHO = 150;
+
+      for (let i = 0; i < linhas.length; i += TAMANHO) {
+        const lote = linhas.slice(i, i + TAMANHO);
+        const { error } = await sb.from('produtos').upsert(lote, { onConflict: 'sku' });
+        if (!error) {
+          for (const p of lote) {
+            if (skus.has(String(p.sku).trim().toUpperCase())) atualizados += 1;
+            else { inseridos += 1; skus.add(String(p.sku).trim().toUpperCase()); }
+          }
+          continue;
+        }
+        // lote rejeitado: tenta linha por linha para apontar o problema
+        for (const p of lote) {
+          const { error: erroLinha } = await sb.from('produtos').upsert([p], { onConflict: 'sku' });
+          if (erroLinha) erros.push(`${p.sku}: ${traduzErro(erroLinha)}`);
+          else if (skus.has(String(p.sku).trim().toUpperCase())) atualizados += 1;
+          else { inseridos += 1; skus.add(String(p.sku).trim().toUpperCase()); }
+        }
       }
 
       corpo.querySelector('#resultado').innerHTML = `
         <div class="cartao" style="box-shadow:none;margin-top:14px">
           <h3>Resultado</h3>
-          <p><strong>${inseridos}</strong> produto(s) importado(s).</p>
-          ${criadas ? `<p class="sub">${criadas} categoria(s) criada(s) automaticamente.</p>` : ''}
+          <p><strong>${inseridos}</strong> produto(s) novo(s) e
+             <strong>${atualizados}</strong> atualizado(s).</p>
+          ${criadasCat + criadasSub + criadasFam ? `<p class="sub">
+            ${criadasCat} categoria(s), ${criadasSub} subcategoria(s) e ${criadasFam} família(s) criadas.</p>` : ''}
           ${erros.length ? `<div class="aviso">${erros.length} linha(s) com problema:<br>
             ${ui.esc(erros.slice(0, 8).join(' · '))}${erros.length > 8 ? ' …' : ''}</div>` : ''}
         </div>`;

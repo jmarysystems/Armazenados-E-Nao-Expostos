@@ -1,14 +1,14 @@
 // Shell: login, layout com menu lateral e rotas.
-import { sb, sair, sessao, meuPerfil, entrar } from './api.js?v=20261116c';
-import { SISTEMA } from './config.js?v=20261116c';
-import * as ui from './ui.js?v=20261116c';
-import * as dashboard from './views/dashboard.js?v=20261116c';
-import * as operacoes from './views/operacoes.js?v=20261116c';
-import * as lojas from './views/lojas.js?v=20261116c';
-import * as cadastrar from './views/cadastrar.js?v=20261116c';
-import * as relatorios from './views/relatorios.js?v=20261116c';
-import * as produtos from './views/produtos.js?v=20261116c';
-import * as cadastros from './views/cadastros.js?v=20261116c';
+import { sb, sair, sessao, meuPerfil, entrar } from './api.js?v=20261116d';
+import { SISTEMA } from './config.js?v=20261116d';
+import * as ui from './ui.js?v=20261116d';
+import * as dashboard from './views/dashboard.js?v=20261116d';
+import * as operacoes from './views/operacoes.js?v=20261116d';
+import * as lojas from './views/lojas.js?v=20261116d';
+import * as cadastrar from './views/cadastrar.js?v=20261116d';
+import * as relatorios from './views/relatorios.js?v=20261116d';
+import * as produtos from './views/produtos.js?v=20261116d';
+import * as cadastros from './views/cadastros.js?v=20261116d';
 
 const app = document.getElementById('app');
 let perfil = null;
