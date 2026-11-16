@@ -1,6 +1,6 @@
 // Produtos: catálogo compartilhado com o Cota-Certa, com a classificação do Armazenados.
-import { listar, criar, atualizar, sb, traduzErro } from '../api.js?v=20261116a';
-import * as ui from '../ui.js?v=20261116a';
+import { listar, criar, atualizar, sb, traduzErro } from '../api.js?v=20261116b';
+import * as ui from '../ui.js?v=20261116b';
 
 const normaliza = (s) => String(s ?? '').toLowerCase().normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '').trim();
@@ -8,10 +8,13 @@ const normaliza = (s) => String(s ?? '').toLowerCase().normalize('NFD')
 export async function render(raiz, ctx) {
   ctx.setTitulo('Produtos');
   const podeEditar = ctx.perfil.perfil !== 'auditor';
-  const [produtos, categorias] = await Promise.all([
+  const [produtos, categorias, subcategorias, familias] = await Promise.all([
     listar('produtos', { select: '*, arm_categorias(descricao)', ordem: 'sku' }),
     listar('arm_categorias', { ordem: 'descricao' }),
+    listar('arm_subcategorias', { ordem: 'descricao' }),
+    listar('arm_familias', { ordem: 'descricao' }),
   ]);
+  const listas = { categorias, subcategorias, familias };
 
   const linhas = produtos.map((p) => `
     <tr data-busca="${ui.esc(`${p.sku} ${p.ean} ${p.descricao}`.toLowerCase())}">
@@ -50,7 +53,7 @@ export async function render(raiz, ctx) {
     }
   });
 
-  const abrir = (p) => modalProduto(p, categorias, ctx);
+  const abrir = (p) => modalProduto(p, listas, ctx);
 
   raiz.querySelector('#novo')?.addEventListener('click', () => abrir({}));
   raiz.querySelector('#nova-categoria')?.addEventListener('click', () => modalCategoria(ctx));
@@ -61,21 +64,70 @@ export async function render(raiz, ctx) {
   }
 }
 
-function modalProduto(p, categorias, ctx) {
+function opcoesDe(itens, valor) {
+  return itens.map((x) => `<option value="${ui.esc(x.id)}" ${
+    x.id === valor ? 'selected' : ''}>${ui.esc(x.descricao)}</option>`).join('');
+}
+
+export function camposClassificacao(listas, p = {}) {
+  const { categorias, subcategorias, familias } = listas;
+  const semCat = categorias.find((c) => c.descricao.toLowerCase() === 'sem categoria');
+  const cat = p.categoria_id || (semCat && semCat.id) || (categorias[0] && categorias[0].id) || '';
+
+  const subs = subcategorias.filter((s) => s.categoria_id === cat);
+  const semSub = subs.find((s) => s.descricao.toLowerCase() === 'sem subcategoria');
+  const sub = p.subcategoria_id || (semSub && semSub.id) || (subs[0] && subs[0].id) || '';
+
+  const fams = familias.filter((f) => f.subcategoria_id === sub);
+  const semFam = fams.find((f) => f.descricao.toLowerCase() === 'sem família');
+  const fam = p.familia_id || (semFam && semFam.id) || (fams[0] && fams[0].id) || '';
+
+  return `
+    <label class="campo"><span>Categoria</span>
+      <select name="categoria_id" data-cat>${opcoesDe(categorias, cat)}</select></label>
+    <label class="campo"><span>Subcategoria</span>
+      <select name="subcategoria_id" data-sub>${opcoesDe(subs, sub)}</select></label>
+    <label class="campo"><span>Família</span>
+      <select name="familia_id" data-fam>${opcoesDe(fams, fam)}</select></label>`;
+}
+
+export function ligarCascata(escopo, listas) {
+  const cat = escopo.querySelector('[data-cat]');
+  const sub = escopo.querySelector('[data-sub]');
+  const fam = escopo.querySelector('[data-fam]');
+  if (!cat || !sub || !fam) return;
+  const { subcategorias, familias } = listas;
+
+  const preencher = (sel, itens) => {
+    sel.innerHTML = itens.map((x) => `<option value="${ui.esc(x.id)}">${ui.esc(x.descricao)}</option>`).join('');
+    const padrao = itens.find((x) => x.descricao.toLowerCase().startsWith('sem '));
+    if (padrao) sel.value = padrao.id;
+  };
+
+  cat.addEventListener('change', () => {
+    preencher(sub, subcategorias.filter((s) => s.categoria_id === cat.value));
+    preencher(fam, familias.filter((f) => f.subcategoria_id === sub.value));
+  });
+  sub.addEventListener('change', () => {
+    preencher(fam, familias.filter((f) => f.subcategoria_id === sub.value));
+  });
+}
+
+function modalProduto(p, listas, ctx) {
   const editando = !!p.id;
-  const opcoes = categorias.map((c) => ({ valor: c.id, rotulo: c.descricao }));
 
   const { fechar, corpo } = ui.modal({
     titulo: editando ? 'Editar produto' : 'Novo produto',
-    largura: '620px',
+    largura: '660px',
     corpo: `
       <form id="form-produto" class="grade grade-2">
         ${ui.campoTexto('SKU', 'sku', p.sku, { obrigatorio: true })}
         ${ui.campoTexto('EAN', 'ean', p.ean, { placeholder: 'se vazio, usa o SKU' })}
         ${ui.campoTexto('Descrição', 'descricao', p.descricao, { obrigatorio: true })}
         ${ui.campoTexto('Unidade', 'unidade', p.unidade || 'UN', { obrigatorio: true })}
-        ${ui.campoSelect('Categoria', 'categoria_id', opcoes, p.categoria_id, { vazio: '—' })}
-        ${ui.campoTexto('Embalagem', 'embalagem', p.embalagem)}
+        ${camposClassificacao(listas, p)}
+        ${ui.campoTexto('Quantidade por embalagem', 'quantidade_por_embalagem',
+          p.quantidade_por_embalagem ?? '', { tipo: 'number', placeholder: 'ex.: 12' })}
         <div class="linha-acoes campo-largo">
           <button type="submit" class="botao-primario">${editando ? 'Salvar' : 'Cadastrar'}</button>
           <button type="button" id="cancelar">Cancelar</button>
@@ -83,7 +135,9 @@ function modalProduto(p, categorias, ctx) {
       </form>`,
   });
 
+  ligarCascata(corpo, listas);
   corpo.querySelector('#cancelar').addEventListener('click', fechar);
+
   corpo.querySelector('#form-produto').addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const d = ui.dadosDoForm(ev.target);
@@ -93,7 +147,9 @@ function modalProduto(p, categorias, ctx) {
       descricao: d.descricao,
       unidade: d.unidade || 'UN',
       categoria_id: d.categoria_id || null,
-      embalagem: d.embalagem || null,
+      subcategoria_id: d.subcategoria_id || null,
+      familia_id: d.familia_id || null,
+      quantidade_por_embalagem: d.quantidade_por_embalagem ? Number(d.quantidade_por_embalagem) : null,
     };
     try {
       if (editando) await atualizar('produtos', p.id, dados);
