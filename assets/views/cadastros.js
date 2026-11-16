@@ -39,6 +39,7 @@ async function render(raiz, ctx, chave) {
 
   const select = ['*', ...cfg.pais.map((p) => `${p.tabela}(descricao)`)].join(', ');
   const dados = await listar(cfg.tabela, { select, ordem: 'descricao' });
+  listaPais[cfg.tabela] = dados;
 
   const nomePai = (linha, p) => linha[p.tabela]?.descricao || '—';
 
@@ -203,12 +204,12 @@ async function render(raiz, ctx, chave) {
         const porCodigo = (tabela, codigo) => {
           const alvo = normaliza(codigo);
           if (!alvo) return null;
-          return listaPais[tabela].find((x) => normaliza(x.codigo_auxiliar) === alvo) || null;
+          return (listaPais[tabela] || []).find((x) => normaliza(x.codigo_auxiliar) === alvo) || null;
         };
         const porDescricao = (tabela, descricao, filtro) => {
           const alvo = normaliza(descricao);
           if (!alvo) return null;
-          return listaPais[tabela].find((x) => normaliza(x.descricao) === alvo && (!filtro || filtro(x))) || null;
+          return (listaPais[tabela] || []).find((x) => normaliza(x.descricao) === alvo && (!filtro || filtro(x))) || null;
         };
 
         let inseridos = 0;
