@@ -304,7 +304,8 @@ async function render(raiz, ctx, chave) {
           if (!sub) continue;
 
           const codFam = String(linha[mapa.codigo] ?? '').trim();
-          const existente = (codFam && porCodigo('arm_familias', codFam)) || porDescricao('arm_familias', descricao);
+          const existente = (codFam && porCodigo('arm_familias', codFam))
+            || porDescricao('arm_familias', descricao, (x) => x.subcategoria_id === sub.id);
           if (existente) { repetidos += 1; continue; }
 
           try {
