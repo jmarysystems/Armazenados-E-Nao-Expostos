@@ -1,6 +1,6 @@
 // Escolha da loja.
-import { listar } from '../api.js?v=20261116f';
-import * as ui from '../ui.js?v=20261116f';
+import { listar } from '../api.js?v=20261116g';
+import * as ui from '../ui.js?v=20261116g';
 
 export async function lista(raiz, ctx) {
   ctx.setTitulo('Armazenados e Não Expostos');
@@ -17,7 +17,7 @@ export async function lista(raiz, ctx) {
     </div>`).join('');
 
   raiz.innerHTML = `
-    <h2 class="titulo-pagina">LOJAS</h2>
+    <h2 class="titulo-pagina">ESTABELECIMENTOS</h2>
     ${visiveis.length ? `<div class="lojas">${cards}</div>`
-      : ui.vazio('Nenhuma loja disponível para o seu usuário.')}`;
+      : ui.vazio('Nenhum estabelecimento disponível para o seu usuário.')}`;
 }

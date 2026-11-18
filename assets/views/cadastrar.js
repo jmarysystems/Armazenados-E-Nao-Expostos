@@ -1,7 +1,7 @@
 // Tela da loja: colar as duas listas e gerar o relatório.
-import { listar, rpc } from '../api.js?v=20261116f';
-import * as ui from '../ui.js?v=20261116f';
-import { imprimirPeriodo } from './relatorios.js?v=20261116f';
+import { listar, rpc } from '../api.js?v=20261116g';
+import * as ui from '../ui.js?v=20261116g';
+import { imprimirPeriodo } from './relatorios.js?v=20261116g';
 
 const hojeISO = () => {
   const d = new Date();
@@ -11,12 +11,12 @@ const hojeISO = () => {
 
 export async function render(raiz, ctx, lojaId) {
   if (!lojaId) {
-    raiz.innerHTML = ui.vazio('Loja não informada.');
+    raiz.innerHTML = ui.vazio('Estabelecimento não informado.');
     return;
   }
   const loja = (await listar('arm_lojas', { eq: { id: lojaId } }))[0];
   if (!loja) {
-    raiz.innerHTML = ui.vazio('Loja não encontrada ou sem acesso.');
+    raiz.innerHTML = ui.vazio('Estabelecimento não encontrado ou sem acesso.');
     return;
   }
   ctx.setTitulo(loja.nome);

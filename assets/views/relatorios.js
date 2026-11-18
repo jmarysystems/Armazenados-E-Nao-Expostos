@@ -1,6 +1,6 @@
 // Relatórios: por dia, por período e por loja (holding) + impressão e envio.
-import { listar, rpc } from '../api.js?v=20261116f';
-import * as ui from '../ui.js?v=20261116f';
+import { listar, rpc } from '../api.js?v=20261116g';
+import * as ui from '../ui.js?v=20261116g';
 
 const hojeISO = () => {
   const d = new Date();
@@ -123,7 +123,7 @@ export async function imprimirPorLoja(inicio, fim) {
     </tr>`).join('');
 
   imprimir(`
-    ${cabecalhoImpressao('Armazenados e Não Expostos', 'POR LOJA - HOLDING',
+    ${cabecalhoImpressao('Armazenados e Não Expostos', 'POR ESTABELECIMENTO - HOLDING',
       `${ui.dataBR(inicio)} a ${ui.dataBR(fim)}`)}
     <table class="totais">
       <thead><tr>
@@ -224,12 +224,12 @@ export async function render(raiz, ctx) {
       <div class="abas">
         <button type="button" class="aba" data-aba="periodo">Por Período</button>
         <button type="button" class="aba ativa" data-aba="dia">Por Dia</button>
-        <button type="button" class="aba" data-aba="loja">Por Loja</button>
+        <button type="button" class="aba" data-aba="loja">Por Estabelecimento</button>
       </div>
 
       <section data-painel="periodo" hidden>
         <div class="grade grade-3">
-          ${ui.campoSelect('Loja', 'lojaPeriodo', opcoesLoja, primeira, { vazio: '—' })}
+          ${ui.campoSelect('Estabelecimento', 'lojaPeriodo', opcoesLoja, primeira, { vazio: '—' })}
           ${ui.campoTexto('Data Inicial', 'inicio', primeiroDiaDoAno(), { tipo: 'date' })}
           ${ui.campoTexto('Data Final', 'fim', hojeISO(), { tipo: 'date' })}
         </div>
@@ -239,7 +239,7 @@ export async function render(raiz, ctx) {
 
       <section data-painel="dia">
         <div class="grade grade-2">
-          ${ui.campoSelect('Loja', 'lojaDia', opcoesLoja, primeira, { vazio: '—' })}
+          ${ui.campoSelect('Estabelecimento', 'lojaDia', opcoesLoja, primeira, { vazio: '—' })}
           ${ui.campoTexto('Data', 'dataDia', hojeISO(), { tipo: 'date' })}
         </div>
         <div class="linha-acoes">
@@ -309,7 +309,7 @@ export async function render(raiz, ctx) {
   function tabelaAuditorias(rows) {
     return `
       <div class="tabela-rolagem"><table>
-        <thead><tr><th>RELATÓRIO</th><th>ID</th><th>DATA CADASTRO</th><th>LOJA</th>
+        <thead><tr><th>RELATÓRIO</th><th>ID</th><th>DATA CADASTRO</th><th>ESTABELECIMENTO</th>
           <th class="num">QTD ITENS AUDITADOS</th><th>AUDITOR</th><th>ENVIADO EMAIL</th></tr></thead>
         <tbody>
           ${rows.map((a) => `<tr data-loja="${ui.esc(a.loja)}" data-dia="${ui.esc(isoDoDia(a.data_cadastro))}">
@@ -393,9 +393,9 @@ export async function render(raiz, ctx) {
       const max = Math.max(...d.lojas.map((l) => l.qtd_deposito), 1);
 
       alvo.innerHTML = `
-        <h3 style="text-align:center">POR LOJA - HOLDING</h3>
+        <h3 style="text-align:center">POR ESTABELECIMENTO - HOLDING</h3>
         <div class="tabela-rolagem"><table>
-          <thead><tr><th>LOJA</th><th class="num">QTD ITENS NO DEPÓSITO</th><th class="num">% DEPÓSITO</th>
+          <thead><tr><th>ESTABELECIMENTO</th><th class="num">QTD ITENS NO DEPÓSITO</th><th class="num">% DEPÓSITO</th>
             <th></th><th class="num">QTD ITENS AUDITADOS</th></tr></thead>
           <tbody>
             <tr><td><strong>TOTAIS →</strong></td>

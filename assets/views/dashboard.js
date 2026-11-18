@@ -1,6 +1,6 @@
 // Dashboard: totais gerais, por loja e por categoria.
-import { rpc } from '../api.js?v=20261116f';
-import * as ui from '../ui.js?v=20261116f';
+import { rpc } from '../api.js?v=20261116g';
+import * as ui from '../ui.js?v=20261116g';
 
 function barra(valor, maximo, cor = '') {
   const pct = maximo > 0 ? Math.max(2, Math.round((valor / maximo) * 100)) : 0;
@@ -34,16 +34,16 @@ export async function render(raiz, ctx) {
         <div class="detalhe">depósito ÷ auditados</div>
       </div>
       <div class="kpi">
-        <div class="rotulo">Lojas</div>
+        <div class="rotulo">Estabelecimentos</div>
         <div class="valor">${lojas.length}</div>
-        <div class="detalhe">${ctx.perfil.perfil === 'admin' ? 'todas as lojas' : 'sua loja'}</div>
+        <div class="detalhe">${ctx.perfil.perfil === 'admin' ? 'todos os estabelecimentos' : 'seu estabelecimento'}</div>
       </div>
     </div>
 
     <div class="cartao">
-      <h2>Resultado por loja</h2>
+      <h2>Resultado por estabelecimento</h2>
       ${lojas.length ? `<div class="tabela-rolagem"><table>
-        <thead><tr><th>Loja</th><th class="num">No depósito</th><th class="num">Auditados</th>
+        <thead><tr><th>Estabelecimento</th><th class="num">No depósito</th><th class="num">Auditados</th>
           <th class="num">%</th><th></th></tr></thead>
         <tbody>
           ${lojas.map((l) => `<tr>
@@ -61,7 +61,7 @@ export async function render(raiz, ctx) {
           <th class="num">${ui.pct(totais.percentual)}</th>
           <th></th>
         </tr></tfoot>
-      </table></div>` : ui.vazio('Nenhuma loja com auditoria.')}
+      </table></div>` : ui.vazio('Nenhum estabelecimento com auditoria.')}
     </div>
 
     <div class="cartao">
