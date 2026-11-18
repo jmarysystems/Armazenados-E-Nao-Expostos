@@ -1,6 +1,6 @@
 // Acesso a dados: Supabase Auth + REST + RPC.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
-import { SUPABASE_URL, SUPABASE_KEY, LOGIN_DOMAIN } from './config.js?v=20261116d';
+import { SUPABASE_URL, SUPABASE_KEY, LOGIN_DOMAIN } from './config.js?v=20261116e';
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
@@ -75,6 +75,11 @@ export async function rpc(nome, args = {}) {
   const { data, error } = await sb.rpc(nome, args);
   if (error) throw new Error(traduzErro(error));
   return data;
+}
+
+export async function minhasPermissoes() {
+  const { data, error } = await sb.rpc('minhas_permissoes');
+  return error ? {} : (data || {});
 }
 
 // Perfil do Armazenados ligado ao usuário logado.

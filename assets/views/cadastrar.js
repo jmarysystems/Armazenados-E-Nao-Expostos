@@ -1,7 +1,7 @@
 // Tela da loja: colar as duas listas e gerar o relatório.
-import { listar, rpc } from '../api.js?v=20261116d';
-import * as ui from '../ui.js?v=20261116d';
-import { imprimirPeriodo } from './relatorios.js?v=20261116d';
+import { listar, rpc } from '../api.js?v=20261116e';
+import * as ui from '../ui.js?v=20261116e';
+import { imprimirPeriodo } from './relatorios.js?v=20261116e';
 
 const hojeISO = () => {
   const d = new Date();
@@ -37,7 +37,8 @@ export async function render(raiz, ctx, lojaId) {
       </div>
       <div class="linha-acoes" style="justify-content:center;margin-top:8px">
         <button type="button" class="botao-azul" id="verificar">Verificar</button>
-        <button type="button" class="botao-primario" id="enviar">Enviar</button>
+        <button type="button" class="botao-primario" id="enviar"
+          ${ctx.pode('armazenados', 'cadastrar') ? '' : 'disabled title="Sem permissão para cadastrar"'}>Enviar</button>
       </div>
       <div id="resultado"></div>
     </div>`;

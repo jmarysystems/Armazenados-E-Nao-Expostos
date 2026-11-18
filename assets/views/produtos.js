@@ -1,13 +1,15 @@
 // Produtos: catálogo compartilhado com o Cota-Certa, com a classificação do Armazenados.
-import { listar, criar, atualizar, sb, traduzErro } from '../api.js?v=20261116d';
-import * as ui from '../ui.js?v=20261116d';
+import { listar, criar, atualizar, sb, traduzErro } from '../api.js?v=20261116e';
+import * as ui from '../ui.js?v=20261116e';
 
 const normaliza = (s) => String(s ?? '').toLowerCase().normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '').trim();
 
 export async function render(raiz, ctx) {
   ctx.setTitulo('Produtos');
-  const podeEditar = ctx.perfil.perfil !== 'auditor';
+  const podeCriarProduto = ctx.pode('produtos', 'cadastrar');
+  const podeEditarProduto = ctx.pode('produtos', 'editar');
+  const podeCriarCategoria = ctx.pode('categoria', 'cadastrar');
   const [produtos, categorias, subcategorias, familias] = await Promise.all([
     listar('produtos', { select: '*, arm_categorias(descricao)', ordem: 'sku' }),
     listar('arm_categorias', { ordem: 'descricao' }),
@@ -23,7 +25,7 @@ export async function render(raiz, ctx) {
       <td>${ui.esc(p.descricao)}</td>
       <td>${ui.esc(p.unidade)}</td>
       <td>${ui.esc(p.arm_categorias?.descricao || '—')}</td>
-      <td class="num">${podeEditar ? `<button type="button" class="botao-pequeno" data-editar="${ui.esc(p.id)}">Editar</button>` : ''}</td>
+      <td class="num">${podeEditarProduto ? `<button type="button" class="botao-pequeno" data-editar="${ui.esc(p.id)}">Editar</button>` : ''}</td>
     </tr>`).join('');
 
   raiz.innerHTML = `
@@ -31,9 +33,9 @@ export async function render(raiz, ctx) {
       <div class="cartao-topo">
         <h2>${produtos.length} produto(s)</h2>
         <div class="linha-acoes">
-          ${podeEditar ? '<button type="button" id="importar">Importar planilha</button>' : ''}
-          ${podeEditar ? '<button type="button" id="nova-categoria">Nova categoria</button>' : ''}
-          ${podeEditar ? '<button type="button" class="botao-primario" id="novo">Novo produto</button>' : ''}
+          ${podeCriarProduto ? '<button type="button" id="importar">Importar planilha</button>' : ''}
+          ${podeCriarCategoria ? '<button type="button" id="nova-categoria">Nova categoria</button>' : ''}
+          ${podeCriarProduto ? '<button type="button" class="botao-primario" id="novo">Novo produto</button>' : ''}
         </div>
       </div>
       <label class="campo" style="max-width:340px"><span>Filtrar</span>

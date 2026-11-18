@@ -1,14 +1,14 @@
 // Shell: login, layout com menu lateral e rotas.
-import { sb, sair, sessao, meuPerfil, entrar } from './api.js?v=20261116d';
-import { SISTEMA } from './config.js?v=20261116d';
-import * as ui from './ui.js?v=20261116d';
-import * as dashboard from './views/dashboard.js?v=20261116d';
-import * as operacoes from './views/operacoes.js?v=20261116d';
-import * as lojas from './views/lojas.js?v=20261116d';
-import * as cadastrar from './views/cadastrar.js?v=20261116d';
-import * as relatorios from './views/relatorios.js?v=20261116d';
-import * as produtos from './views/produtos.js?v=20261116d';
-import * as cadastros from './views/cadastros.js?v=20261116d';
+import { sb, sair, sessao, meuPerfil, entrar, minhasPermissoes } from './api.js?v=20261116e';
+import { SISTEMA } from './config.js?v=20261116e';
+import * as ui from './ui.js?v=20261116e';
+import * as dashboard from './views/dashboard.js?v=20261116e';
+import * as operacoes from './views/operacoes.js?v=20261116e';
+import * as lojas from './views/lojas.js?v=20261116e';
+import * as cadastrar from './views/cadastrar.js?v=20261116e';
+import * as relatorios from './views/relatorios.js?v=20261116e';
+import * as produtos from './views/produtos.js?v=20261116e';
+import * as cadastros from './views/cadastros.js?v=20261116e';
 
 const app = document.getElementById('app');
 let perfil = null;
@@ -44,6 +44,7 @@ function telaLogin(mensagem = '') {
     try {
       await entrar(form.documento.value, form.senha.value);
       perfil = await meuPerfil();
+      if (perfil) perfil.permissoes = await minhasPermissoes();
       if (!perfil) throw new Error('Sua conta não tem perfil de usuário.');
       if (!perfil.perfil) throw new Error('Seu usuário não tem acesso ao Armazenados.');
       iniciarApp();
@@ -117,6 +118,12 @@ async function navegar() {
   const ctx = {
     perfil,
     admin: perfil.perfil === 'admin',
+    pode: (modulo, acao) => {
+      const p = perfil.permissoes || {};
+      if (p.admin) return true;
+      const m = p[modulo];
+      return !!(m && m[acao]);
+    },
     irPara: (hash) => { location.hash = hash; },
     recarregar: () => navegar(),
     setTitulo: (texto) => {
@@ -156,6 +163,7 @@ sb.auth.onAuthStateChange((evento) => {
     const s = await sessao();
     if (!s) return telaLogin();
     perfil = await meuPerfil();
+      if (perfil) perfil.permissoes = await minhasPermissoes();
     if (!perfil || !perfil.perfil) {
       await sair();
       return telaLogin('Seu usuário não tem acesso ao Armazenados.');

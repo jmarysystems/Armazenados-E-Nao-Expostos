@@ -1,6 +1,6 @@
 // Categorias, subcategorias e famílias (mesmo padrão da tela de produtos).
-import { listar, criar, atualizar, excluir, sb, traduzErro } from '../api.js?v=20261116d';
-import * as ui from '../ui.js?v=20261116d';
+import { listar, criar, atualizar, excluir, sb, traduzErro } from '../api.js?v=20261116e';
+import * as ui from '../ui.js?v=20261116e';
 
 const DEF = {
   categorias: {
@@ -30,7 +30,9 @@ export const familias = (raiz, ctx) => render(raiz, ctx, 'familias');
 async function render(raiz, ctx, chave) {
   const cfg = DEF[chave];
   ctx.setTitulo(cfg.titulo);
-  const podeEditar = ctx.perfil.perfil !== 'auditor';
+  const podeCriar = ctx.pode(chave, 'cadastrar');
+  const podeEditar = ctx.pode(chave, 'editar');
+  const podeExcluir = ctx.pode(chave, 'excluir');
 
   const listaPais = {};
   for (const p of cfg.pais) {
@@ -49,8 +51,8 @@ async function render(raiz, ctx, chave) {
       <td>${ui.esc(d.descricao)}</td>
       ${cfg.pais.map((p) => `<td>${ui.esc(nomePai(d, p))}</td>`).join('')}
       <td class="acoes">
-        ${podeEditar ? `<button type="button" class="botao-pequeno" data-editar="${ui.esc(d.id)}">Editar</button>
-        <button type="button" class="botao-pequeno botao-perigo" data-excluir="${ui.esc(d.id)}">Excluir</button>` : ''}
+        ${podeEditar ? `<button type="button" class="botao-pequeno" data-editar="${ui.esc(d.id)}">Editar</button>` : ''}
+        ${podeExcluir ? `<button type="button" class="botao-pequeno botao-perigo" data-excluir="${ui.esc(d.id)}">Excluir</button>` : ''}
       </td>
     </tr>`).join('');
 
@@ -58,7 +60,7 @@ async function render(raiz, ctx, chave) {
     <div class="cartao">
       <div class="cartao-topo">
         <h2>${dados.length} ${ui.esc(cfg.singular)}(s)</h2>
-        ${podeEditar ? `<div class="linha-acoes">
+        ${podeCriar ? `<div class="linha-acoes">
           <button type="button" id="importar">Importar arquivo</button>
           <button type="button" class="botao-primario" id="novo">Nova ${ui.esc(cfg.singular)}</button>
         </div>` : ''}
