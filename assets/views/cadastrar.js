@@ -1,7 +1,7 @@
 // Tela da loja: colar as duas listas e gerar o relatório.
-import { listar, rpc } from '../api.js?v=20261116e';
-import * as ui from '../ui.js?v=20261116e';
-import { imprimirPeriodo } from './relatorios.js?v=20261116e';
+import { listar, rpc } from '../api.js?v=20261116f';
+import * as ui from '../ui.js?v=20261116f';
+import { imprimirPeriodo } from './relatorios.js?v=20261116f';
 
 const hojeISO = () => {
   const d = new Date();

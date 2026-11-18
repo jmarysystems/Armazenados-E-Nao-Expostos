@@ -1,6 +1,6 @@
 // Escolha da loja.
-import { listar } from '../api.js?v=20261116e';
-import * as ui from '../ui.js?v=20261116e';
+import { listar } from '../api.js?v=20261116f';
+import * as ui from '../ui.js?v=20261116f';
 
 export async function lista(raiz, ctx) {
   ctx.setTitulo('Armazenados e Não Expostos');

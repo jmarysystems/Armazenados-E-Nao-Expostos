@@ -1,6 +1,6 @@
 // Acesso a dados: Supabase Auth + REST + RPC.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
-import { SUPABASE_URL, SUPABASE_KEY, LOGIN_DOMAIN } from './config.js?v=20261116e';
+import { SUPABASE_URL, SUPABASE_KEY, LOGIN_DOMAIN } from './config.js?v=20261116f';
 
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
@@ -63,12 +63,18 @@ export async function criar(tabela, dados) {
 export async function atualizar(tabela, id, dados) {
   const { data, error } = await sb.from(tabela).update(dados).eq('id', id).select();
   if (error) throw new Error(traduzErro(error));
-  return Array.isArray(data) ? data[0] : data;
+  if (!Array.isArray(data) || !data.length) {
+    throw new Error('Sem permissão para alterar este registro.');
+  }
+  return data[0];
 }
 
 export async function excluir(tabela, id) {
-  const { error } = await sb.from(tabela).delete().eq('id', id);
+  const { data, error } = await sb.from(tabela).delete().eq('id', id).select();
   if (error) throw new Error(traduzErro(error));
+  if (!Array.isArray(data) || !data.length) {
+    throw new Error('Sem permissão para excluir este registro.');
+  }
 }
 
 export async function rpc(nome, args = {}) {
