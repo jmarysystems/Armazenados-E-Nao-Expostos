@@ -1,6 +1,6 @@
 // Produtos: catálogo compartilhado com o Cota-Certa, com a classificação do Armazenados.
-import { listar, criar, atualizar, sb, traduzErro } from '../api.js?v=20261116g';
-import * as ui from '../ui.js?v=20261116g';
+import { listar, criar, atualizar, sb, traduzErro } from '../api.js?v=20261116h';
+import * as ui from '../ui.js?v=20261116h';
 
 const normaliza = (s) => String(s ?? '').toLowerCase().normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '').trim();
@@ -25,6 +25,7 @@ export async function render(raiz, ctx) {
       <td>${ui.esc(p.descricao)}</td>
       <td>${ui.esc(p.unidade)}</td>
       <td>${ui.esc(p.arm_categorias?.descricao || '—')}</td>
+      <td>${p.ativo === false ? 'inativo' : 'ativo'}</td>
       <td class="num">${podeEditarProduto ? `<button type="button" class="botao-pequeno" data-editar="${ui.esc(p.id)}">Editar</button>` : ''}</td>
     </tr>`).join('');
 
@@ -41,8 +42,9 @@ export async function render(raiz, ctx) {
       <label class="campo" style="max-width:340px"><span>Filtrar</span>
         <input type="search" id="filtro" placeholder="SKU, EAN ou descrição"></label>
       <div class="tabela-rolagem"><table id="tabela">
-        <thead><tr><th>EAN</th><th>SKU</th><th>Descrição</th><th>Un.</th><th>Categoria</th><th></th></tr></thead>
-        <tbody>${linhas || '<tr><td colspan="6">Nenhum produto cadastrado.</td></tr>'}</tbody>
+        <thead><tr><th>EAN</th><th>SKU</th><th>Descrição</th><th>Un.</th><th>Categoria</th>
+          <th>Situação</th><th></th></tr></thead>
+        <tbody>${linhas || '<tr><td colspan="7">Nenhum produto cadastrado.</td></tr>'}</tbody>
       </table></div>
     </div>`;
 
@@ -130,6 +132,8 @@ function modalProduto(p, listas, ctx) {
         ${camposClassificacao(listas, p)}
         ${ui.campoTexto('Quantidade por embalagem', 'quantidade_por_embalagem',
           p.quantidade_por_embalagem ?? '', { tipo: 'number', placeholder: 'ex.: 12' })}
+        <label class="campo"><span>Ativo</span>
+          <input type="checkbox" name="ativo" ${p.ativo === false ? '' : 'checked'}></label>
         <div class="linha-acoes campo-largo">
           <button type="submit" class="botao-primario">${editando ? 'Salvar' : 'Cadastrar'}</button>
           <button type="button" id="cancelar">Cancelar</button>
@@ -152,6 +156,7 @@ function modalProduto(p, listas, ctx) {
       subcategoria_id: d.subcategoria_id || null,
       familia_id: d.familia_id || null,
       quantidade_por_embalagem: d.quantidade_por_embalagem ? Number(d.quantidade_por_embalagem) : null,
+      ativo: !!corpo.querySelector('[name="ativo"]').checked,
     };
     try {
       if (editando) await atualizar('produtos', p.id, dados);

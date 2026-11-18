@@ -1,6 +1,6 @@
 // Operações (cards) e escolha de loja.
-import { listar } from '../api.js?v=20261116g';
-import * as ui from '../ui.js?v=20261116g';
+import { listar } from '../api.js?v=20261116h';
+import * as ui from '../ui.js?v=20261116h';
 
 const OPERACOES = [
   { id: 'armazenados', nome: 'ARMAZENADOS E NÃO EXPOSTOS', desc: 'Controle do que está no depósito', ativa: true },
