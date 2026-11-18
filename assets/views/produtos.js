@@ -1,6 +1,6 @@
 // Produtos: catálogo compartilhado com o Cota-Certa, com a classificação do Armazenados.
-import { listar, criar, atualizar, sb, traduzErro } from '../api.js?v=20261116h';
-import * as ui from '../ui.js?v=20261116h';
+import { listar, criar, atualizar, sb, traduzErro } from '../api.js?v=20261116i';
+import * as ui from '../ui.js?v=20261116i';
 
 const normaliza = (s) => String(s ?? '').toLowerCase().normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '').trim();
@@ -10,13 +10,14 @@ export async function render(raiz, ctx) {
   const podeCriarProduto = ctx.pode('produtos', 'cadastrar');
   const podeEditarProduto = ctx.pode('produtos', 'editar');
   const podeCriarCategoria = ctx.pode('categoria', 'cadastrar');
-  const [produtos, categorias, subcategorias, familias] = await Promise.all([
-    listar('produtos', { select: '*, arm_categorias(descricao)', ordem: 'sku' }),
+  const [produtos, categorias, subcategorias, familias, marcas] = await Promise.all([
+    listar('produtos', { select: '*, arm_categorias(descricao), arm_marcas(descricao)', ordem: 'sku' }),
     listar('arm_categorias', { ordem: 'descricao' }),
     listar('arm_subcategorias', { ordem: 'descricao' }),
     listar('arm_familias', { ordem: 'descricao' }),
+    listar('arm_marcas', { ordem: 'descricao' }),
   ]);
-  const listas = { categorias, subcategorias, familias };
+  const listas = { categorias, subcategorias, familias, marcas };
 
   const linhas = produtos.map((p) => `
     <tr data-busca="${ui.esc(`${p.sku} ${p.ean} ${p.descricao}`.toLowerCase())}">
@@ -25,6 +26,7 @@ export async function render(raiz, ctx) {
       <td>${ui.esc(p.descricao)}</td>
       <td>${ui.esc(p.unidade)}</td>
       <td>${ui.esc(p.arm_categorias?.descricao || '—')}</td>
+      <td>${ui.esc(p.arm_marcas?.descricao || '—')}</td>
       <td>${p.ativo === false ? 'inativo' : 'ativo'}</td>
       <td class="num">${podeEditarProduto ? `<button type="button" class="botao-pequeno" data-editar="${ui.esc(p.id)}">Editar</button>` : ''}</td>
     </tr>`).join('');
@@ -42,9 +44,9 @@ export async function render(raiz, ctx) {
       <label class="campo" style="max-width:340px"><span>Filtrar</span>
         <input type="search" id="filtro" placeholder="SKU, EAN ou descrição"></label>
       <div class="tabela-rolagem"><table id="tabela">
-        <thead><tr><th>EAN</th><th>SKU</th><th>Descrição</th><th>Un.</th><th>Categoria</th>
+        <thead><tr><th>EAN</th><th>SKU</th><th>Descrição</th><th>Un.</th><th>Categoria</th><th>Marca</th>
           <th>Situação</th><th></th></tr></thead>
-        <tbody>${linhas || '<tr><td colspan="7">Nenhum produto cadastrado.</td></tr>'}</tbody>
+        <tbody>${linhas || '<tr><td colspan="8">Nenhum produto cadastrado.</td></tr>'}</tbody>
       </table></div>
     </div>`;
 
@@ -92,7 +94,13 @@ export function camposClassificacao(listas, p = {}) {
     <label class="campo"><span>Subcategoria</span>
       <select name="subcategoria_id" data-sub>${opcoesDe(subs, sub)}</select></label>
     <label class="campo"><span>Família</span>
-      <select name="familia_id" data-fam>${opcoesDe(fams, fam)}</select></label>`;
+      <select name="familia_id" data-fam>${opcoesDe(fams, fam)}</select></label>
+    <label class="campo"><span>Marca</span>
+      <select name="marca_id">
+        <option value="">—</option>
+        ${(listas.marcas || []).map((m) => `<option value="${m.id}" ${
+          m.id === (p.marca_id || '') ? 'selected' : ''}>${m.descricao}</option>`).join('')}
+      </select></label>`;
 }
 
 export function ligarCascata(escopo, listas) {
@@ -155,6 +163,7 @@ function modalProduto(p, listas, ctx) {
       categoria_id: d.categoria_id || null,
       subcategoria_id: d.subcategoria_id || null,
       familia_id: d.familia_id || null,
+      marca_id: d.marca_id || null,
       quantidade_por_embalagem: d.quantidade_por_embalagem ? Number(d.quantidade_por_embalagem) : null,
       ativo: !!corpo.querySelector('[name="ativo"]').checked,
     };

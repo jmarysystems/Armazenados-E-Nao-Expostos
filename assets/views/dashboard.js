@@ -1,6 +1,6 @@
 // Dashboard: totais gerais, por loja e por categoria.
-import { rpc } from '../api.js?v=20261116h';
-import * as ui from '../ui.js?v=20261116h';
+import { rpc } from '../api.js?v=20261116i';
+import * as ui from '../ui.js?v=20261116i';
 
 function barra(valor, maximo, cor = '') {
   const pct = maximo > 0 ? Math.max(2, Math.round((valor / maximo) * 100)) : 0;
